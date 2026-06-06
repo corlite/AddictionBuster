@@ -147,10 +147,14 @@ public class AddAppActivity extends Activity {
             current.add(app.packageName);
         } else {
             current.remove(app.packageName);
+            RuleStore.clearAppRule(this, app.packageName);
         }
         RuleStore.saveBlockedPackages(this, current);
         toggle.setChecked(nextChecked);
         DiagnosticLogger.log(this, "rule", (nextChecked ? "blocked " : "unblocked ") + app.packageName + " label=" + app.label);
+        if (nextChecked) {
+            startActivity(AppRuleActivity.intentFor(this, app.packageName, app.label));
+        }
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {

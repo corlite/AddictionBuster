@@ -9,7 +9,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +31,7 @@ public class ActiveAppsActivity extends Activity {
         TextView title = text("生效应用", 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView subtitle = text("这里显示已经启用拦截的所有应用。规则详情会在下一步接入。", 15, Color.rgb(71, 85, 105), false);
+        TextView subtitle = text("这里显示已经启用拦截的所有应用。点进去可以查看和修改规则。", 15, Color.rgb(71, 85, 105), false);
         subtitle.setPadding(0, dp(8), 0, dp(14));
         root.addView(subtitle, matchWrap());
 
@@ -70,7 +69,7 @@ public class ActiveAppsActivity extends Activity {
             row.setText(label + "\n" + packageName);
             row.setTextSize(15);
             row.setTextColor(Color.rgb(15, 23, 42));
-            row.setOnClickListener(v -> Toast.makeText(this, "下一步接入规则设置：" + label, Toast.LENGTH_SHORT).show());
+            row.setOnClickListener(v -> startActivity(AppRuleActivity.intentFor(this, packageName, label)));
             list.addView(row, matchWrap());
         }
     }

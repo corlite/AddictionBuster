@@ -13,6 +13,14 @@ final class RuleStore {
     private static final String KEY_PASSTHROUGH_PACKAGE = "passthrough_package";
     private static final String KEY_PASSTHROUGH_UNTIL_MILLIS = "passthrough_until_millis";
     private static final String KEY_CHALLENGE_PACKAGE = "challenge_package";
+    private static final String RULE_PREFIX = "app_rule.";
+    private static final String FIELD_DAILY_QUOTA_MINUTES = ".daily_quota_minutes";
+    private static final String FIELD_SESSION_LIMIT_MINUTES = ".session_limit_minutes";
+    private static final String FIELD_WAIT_SECONDS = ".wait_seconds";
+    private static final String FIELD_REQUIRED_TAPS = ".required_taps";
+    private static final String FIELD_HIDDEN_COUNT = ".hidden_count";
+    private static final String FIELD_HIDDEN_SECONDS = ".hidden_seconds";
+    private static final String FIELD_CONFIRM_TEXT = ".confirm_text";
     private static final long MINUTE_MILLIS = 60_000L;
 
     private RuleStore() {
@@ -33,6 +41,55 @@ final class RuleStore {
 
     static boolean isBlocked(Context context, String packageName) {
         return getBlockedPackages(context).contains(packageName);
+    }
+
+    static AppRule getAppRule(Context context, String packageName) {
+        SharedPreferences preferences = prefs(context);
+        AppRule defaults = AppRule.defaults();
+        return new AppRule(
+                preferences.getInt(ruleKey(packageName, FIELD_DAILY_QUOTA_MINUTES), defaults.dailyQuotaMinutes),
+                preferences.getInt(ruleKey(packageName, FIELD_SESSION_LIMIT_MINUTES), defaults.sessionLimitMinutes),
+                preferences.getInt(ruleKey(packageName, FIELD_WAIT_SECONDS), defaults.waitSeconds),
+                preferences.getInt(ruleKey(packageName, FIELD_REQUIRED_TAPS), defaults.requiredTaps),
+                preferences.getInt(ruleKey(packageName, FIELD_HIDDEN_COUNT), defaults.hiddenCount),
+                preferences.getInt(ruleKey(packageName, FIELD_HIDDEN_SECONDS), defaults.hiddenSeconds),
+                preferences.getString(ruleKey(packageName, FIELD_CONFIRM_TEXT), defaults.confirmText)
+        );
+    }
+
+    static void saveAppRule(Context context, String packageName, AppRule rule) {
+        prefs(context)
+                .edit()
+                .putInt(ruleKey(packageName, FIELD_DAILY_QUOTA_MINUTES), clamp(rule.dailyQuotaMinutes, 0, 1440))
+                .putInt(ruleKey(packageName, FIELD_SESSION_LIMIT_MINUTES), clamp(rule.sessionLimitMinutes, 1, 240))
+                .putInt(ruleKey(packageName, FIELD_WAIT_SECONDS), clamp(rule.waitSeconds, 0, 300))
+                .putInt(ruleKey(packageName, FIELD_REQUIRED_TAPS), clamp(rule.requiredTaps, 0, 30))
+                .putInt(ruleKey(packageName, FIELD_HIDDEN_COUNT), clamp(rule.hiddenCount, 0, 20))
+                .putInt(ruleKey(packageName, FIELD_HIDDEN_SECONDS), clamp(rule.hiddenSeconds, 1, 20))
+                .putString(ruleKey(packageName, FIELD_CONFIRM_TEXT), rule.confirmText)
+                .apply();
+        DiagnosticLogger.log(context, "rule", "saved app rule package=" + packageName
+                + " dailyQuotaMinutes=" + rule.dailyQuotaMinutes
+                + " sessionLimitMinutes=" + rule.sessionLimitMinutes
+                + " waitSeconds=" + rule.waitSeconds
+                + " requiredTaps=" + rule.requiredTaps
+                + " hiddenCount=" + rule.hiddenCount
+                + " hiddenSeconds=" + rule.hiddenSeconds
+                + " confirmTextLength=" + rule.confirmText.length());
+    }
+
+    static void clearAppRule(Context context, String packageName) {
+        prefs(context)
+                .edit()
+                .remove(ruleKey(packageName, FIELD_DAILY_QUOTA_MINUTES))
+                .remove(ruleKey(packageName, FIELD_SESSION_LIMIT_MINUTES))
+                .remove(ruleKey(packageName, FIELD_WAIT_SECONDS))
+                .remove(ruleKey(packageName, FIELD_REQUIRED_TAPS))
+                .remove(ruleKey(packageName, FIELD_HIDDEN_COUNT))
+                .remove(ruleKey(packageName, FIELD_HIDDEN_SECONDS))
+                .remove(ruleKey(packageName, FIELD_CONFIRM_TEXT))
+                .apply();
+        DiagnosticLogger.log(context, "rule", "cleared app rule package=" + packageName);
     }
 
     static void grantPassthrough(Context context, String packageName, int minutes) {
@@ -122,5 +179,13 @@ final class RuleStore {
     private static SharedPreferences prefs(Context context) {
         return context.getApplicationContext()
                 .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    private static String ruleKey(String packageName, String field) {
+        return RULE_PREFIX + packageName + field;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
