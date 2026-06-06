@@ -30,6 +30,12 @@ public class AddAppActivity extends Activity {
         setContentView(buildContent());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        renderAppList();
+    }
+
     private LinearLayout buildContent() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -85,15 +91,8 @@ public class AddAppActivity extends Activity {
         appListView.removeAllViews();
         String query = searchInput == null ? "" : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
         Set<String> selected = RuleStore.getBlockedPackages(this);
-        int shown = 0;
-
-        for (AppInfo app : apps) {
-            if (!matches(app, query)) {
-                continue;
-            }
-            shown++;
-            appListView.addView(appRow(app, selected.contains(app.packageName)), matchWrap());
-        }
+        int shown = addMatchingRows(query, selected, true);
+        shown += addMatchingRows(query, selected, false);
 
         if (shown == 0) {
             TextView empty = text("没有找到匹配的应用。可以试试应用中文名、英文名或包名。", 15, Color.rgb(100, 116, 139), false);
@@ -101,6 +100,22 @@ public class AddAppActivity extends Activity {
             empty.setPadding(0, dp(36), 0, 0);
             appListView.addView(empty, matchWrap());
         }
+    }
+
+    private int addMatchingRows(String query, Set<String> selected, boolean checkedRows) {
+        int shown = 0;
+        for (AppInfo app : apps) {
+            if (!matches(app, query)) {
+                continue;
+            }
+            boolean checked = selected.contains(app.packageName);
+            if (checked != checkedRows) {
+                continue;
+            }
+            shown++;
+            appListView.addView(appRow(app, checked), matchWrap());
+        }
+        return shown;
     }
 
     private boolean matches(AppInfo app, String query) {
@@ -179,6 +194,7 @@ public class AddAppActivity extends Activity {
         RuleStore.saveBlockedPackages(this, current);
         toggle.setChecked(true);
         DiagnosticLogger.log(this, "rule", "blocked " + app.packageName + " label=" + app.label);
+        renderAppList();
         startActivity(AppRuleActivity.intentFor(this, app.packageName, app.label));
     }
 
@@ -189,6 +205,7 @@ public class AddAppActivity extends Activity {
         RuleStore.clearAppRule(this, app.packageName);
         toggle.setChecked(false);
         DiagnosticLogger.log(this, "rule", "unblocked " + app.packageName + " label=" + app.label);
+        renderAppList();
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {

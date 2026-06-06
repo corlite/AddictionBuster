@@ -30,6 +30,12 @@ public class PhoneWhitelistActivity extends Activity {
         setContentView(buildContent());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        renderAppList();
+    }
+
     private LinearLayout buildContent() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -85,15 +91,8 @@ public class PhoneWhitelistActivity extends Activity {
         appListView.removeAllViews();
         String query = searchInput == null ? "" : searchInput.getText().toString().trim().toLowerCase(Locale.ROOT);
         Set<String> whitelist = RuleStore.getPhoneWhitelistPackages(this);
-        int shown = 0;
-
-        for (AppInfo app : apps) {
-            if (!matches(app, query)) {
-                continue;
-            }
-            shown++;
-            appListView.addView(appRow(app, whitelist.contains(app.packageName)), matchWrap());
-        }
+        int shown = addMatchingRows(query, whitelist, true);
+        shown += addMatchingRows(query, whitelist, false);
 
         if (shown == 0) {
             TextView empty = text("没有找到匹配的应用。", 15, Color.rgb(100, 116, 139), false);
@@ -101,6 +100,22 @@ public class PhoneWhitelistActivity extends Activity {
             empty.setPadding(0, dp(36), 0, 0);
             appListView.addView(empty, matchWrap());
         }
+    }
+
+    private int addMatchingRows(String query, Set<String> whitelist, boolean checkedRows) {
+        int shown = 0;
+        for (AppInfo app : apps) {
+            if (!matches(app, query)) {
+                continue;
+            }
+            boolean checked = whitelist.contains(app.packageName);
+            if (checked != checkedRows) {
+                continue;
+            }
+            shown++;
+            appListView.addView(appRow(app, checked), matchWrap());
+        }
+        return shown;
     }
 
     private boolean matches(AppInfo app, String query) {
@@ -153,9 +168,11 @@ public class PhoneWhitelistActivity extends Activity {
             whitelist.add(app.packageName);
             toggle.setChecked(true);
         }
+        boolean checked = whitelist.contains(app.packageName);
         RuleStore.savePhoneWhitelistPackages(this, whitelist);
         DiagnosticLogger.log(this, "rule", "phone whitelist toggled package=" + app.packageName
-                + " checked=" + toggle.isChecked());
+                + " checked=" + checked);
+        renderAppList();
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {
