@@ -2,7 +2,7 @@
 
 AddictionBuster 的中文名是“瘾头破坏器”。这是一个最小版 Android 戒断工具，当前只做三个核心功能：
 
-当前版本：0.1.1
+当前版本：0.1.2
 
 1. 选择要限制的 App
 2. 打开目标 App 时拦截
@@ -58,6 +58,8 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 ```
 
 如果日志里完全没有 `[service] connected` 或 `[event] window type=... package=...`，通常说明无障碍服务没有真正运行，或系统/OEM 后台限制把服务停掉了。如果有 `event` 但 `blocked=false`，说明命中的包名和勾选保存的包名不一致。如果有 `launch challenge` 但没有看到挑战页，再看后面的错误行和系统 `ActivityTaskManager` 输出。
+
+0.1.2 起，命中限制 App 后优先由无障碍服务显示全屏 overlay 挑战层，不再完全依赖从后台启动 ChallengeActivity。日志中出现 `[challenge] show overlay ...` 表示 overlay 已创建；如果出现 `failed to show overlay`，会继续尝试旧的 Activity 兜底路径。
 
 ## 已知限制
 
