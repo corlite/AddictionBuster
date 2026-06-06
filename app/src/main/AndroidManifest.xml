@@ -24,6 +24,10 @@
             android:taskAffinity="" />
 
         <activity
+            android:name=".DiagnosticActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

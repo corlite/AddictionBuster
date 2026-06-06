@@ -37,6 +37,26 @@ app/build/outputs/apk/debug/app-debug.apk
 - 放行：15 秒挑战结束后点击“继续打开”，只临时放行当前目标 App。
 - 复拦截：离开目标 App 后再次打开，会重新触发挑战。
 
+## 诊断日志
+
+如果真机上无法拦截，先按下面流程取日志：
+
+1. 打开“瘾头破坏器”。
+2. 点击“查看诊断日志”，先清空日志。
+3. 确认已经勾选要限制的 App，并且系统无障碍里已经开启“瘾头破坏器拦截服务”。
+4. 打开目标 App，复现一次“没有被拦截”的问题。
+5. 回到“瘾头破坏器”，点击“查看诊断日志”。
+6. 复制或分享最后几十行日志，重点看 `service`、`event`、`challenge` 行。
+
+也可以用 ADB 获取日志：
+
+```powershell
+adb logcat -d -s AddictionBuster:I AndroidRuntime:E ActivityTaskManager:W
+adb shell run-as com.addictionbuster.app cat files/diagnostic.log
+```
+
+如果日志里完全没有 `[service] connected` 或 `[event] window type=... package=...`，通常说明无障碍服务没有真正运行，或系统/OEM 后台限制把服务停掉了。如果有 `event` 但 `blocked=false`，说明命中的包名和勾选保存的包名不一致。如果有 `launch challenge` 但没有看到挑战页，再看后面的错误行和系统 `ActivityTaskManager` 输出。
+
 ## 已知限制
 
 - 目前只有 MVP，没有每日时长限制、统计、规则组、日程、计数器或网页拦截。

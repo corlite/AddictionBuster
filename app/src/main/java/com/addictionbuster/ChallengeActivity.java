@@ -23,6 +23,7 @@ public class ChallengeActivity extends Activity {
     private TextView breathView;
     private Button continueButton;
     private boolean completed;
+    private boolean continuedToTarget;
 
     private final Runnable tick = new Runnable() {
         @Override
@@ -33,6 +34,7 @@ public class ChallengeActivity extends Activity {
                 continueButton.setEnabled(true);
                 continueButton.setText("继续打开");
                 breathView.setText("现在再决定一次：你真的要打开它吗？");
+                DiagnosticLogger.log(ChallengeActivity.this, "challenge", "countdown complete targetPackage=" + targetPackage);
                 return;
             }
             remaining--;
@@ -46,6 +48,7 @@ public class ChallengeActivity extends Activity {
         targetPackage = getIntent().getStringExtra(BusterAccessibilityService.EXTRA_TARGET_PACKAGE);
         targetLabel = getIntent().getStringExtra(BusterAccessibilityService.EXTRA_TARGET_LABEL);
         if (targetPackage == null) {
+            DiagnosticLogger.log(this, "challenge", "finish because target package is null");
             finish();
             return;
         }
@@ -53,6 +56,7 @@ public class ChallengeActivity extends Activity {
             targetLabel = targetPackage;
         }
 
+        DiagnosticLogger.log(this, "challenge", "created targetPackage=" + targetPackage + " targetLabel=" + targetLabel);
         setContentView(buildContent());
         handler.post(tick);
     }
@@ -60,8 +64,11 @@ public class ChallengeActivity extends Activity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
-        if (!completed) {
+        if (!continuedToTarget) {
+            DiagnosticLogger.log(this, "challenge", "destroy without continuing targetPackage=" + targetPackage);
             RuleStore.clearChallengePackage(this);
+        } else {
+            DiagnosticLogger.log(this, "challenge", "destroy after continuing to targetPackage=" + targetPackage);
         }
         super.onDestroy();
     }
@@ -127,18 +134,27 @@ public class ChallengeActivity extends Activity {
 
     private void continueToTarget() {
         completed = true;
+        continuedToTarget = true;
         RuleStore.grantPassthrough(this, targetPackage);
 
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(targetPackage);
         if (launchIntent != null) {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            startActivity(launchIntent);
+            try {
+                DiagnosticLogger.log(this, "challenge", "continue to target package=" + targetPackage);
+                startActivity(launchIntent);
+            } catch (RuntimeException exception) {
+                DiagnosticLogger.log(this, "challenge", "failed to continue target package=" + targetPackage + " error=" + exception);
+            }
+        } else {
+            DiagnosticLogger.log(this, "challenge", "target launch intent is null package=" + targetPackage);
         }
         finish();
     }
 
     private void goHome() {
+        DiagnosticLogger.log(this, "challenge", "user chose home targetPackage=" + targetPackage);
         RuleStore.clearChallengePackage(this);
         Intent home = new Intent(Intent.ACTION_MAIN);
         home.addCategory(Intent.CATEGORY_HOME);

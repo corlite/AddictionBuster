@@ -26,6 +26,7 @@ final class RuleStore {
                 .edit()
                 .putStringSet(KEY_BLOCKED_PACKAGES, new HashSet<>(packages))
                 .apply();
+        DiagnosticLogger.log(context, "rule", "saved blocked packages=" + packages);
     }
 
     static boolean isBlocked(Context context, String packageName) {
@@ -38,6 +39,7 @@ final class RuleStore {
                 .putString(KEY_PASSTHROUGH_PACKAGE, packageName)
                 .remove(KEY_CHALLENGE_PACKAGE)
                 .apply();
+        DiagnosticLogger.log(context, "rule", "grant passthrough package=" + packageName);
     }
 
     static boolean hasPassthrough(Context context, String packageName) {
@@ -46,13 +48,19 @@ final class RuleStore {
 
     static void clearPassthrough(Context context) {
         prefs(context).edit().remove(KEY_PASSTHROUGH_PACKAGE).apply();
+        DiagnosticLogger.log(context, "rule", "clear passthrough");
     }
 
     static void clearPassthroughIfDifferent(Context context, String packageName) {
         String allowed = prefs(context).getString(KEY_PASSTHROUGH_PACKAGE, null);
         if (allowed != null && !allowed.equals(packageName)) {
+            DiagnosticLogger.log(context, "rule", "clear passthrough because foreground=" + packageName + " allowed=" + allowed);
             clearPassthrough(context);
         }
+    }
+
+    static String getPassthroughPackage(Context context) {
+        return prefs(context).getString(KEY_PASSTHROUGH_PACKAGE, null);
     }
 
     static String getChallengePackage(Context context) {
@@ -61,10 +69,12 @@ final class RuleStore {
 
     static void setChallengePackage(Context context, String packageName) {
         prefs(context).edit().putString(KEY_CHALLENGE_PACKAGE, packageName).apply();
+        DiagnosticLogger.log(context, "rule", "set active challenge package=" + packageName);
     }
 
     static void clearChallengePackage(Context context) {
         prefs(context).edit().remove(KEY_CHALLENGE_PACKAGE).apply();
+        DiagnosticLogger.log(context, "rule", "clear active challenge package");
     }
 
     private static SharedPreferences prefs(Context context) {

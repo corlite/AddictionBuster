@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DiagnosticLogger.log(this, "main", "main screen created");
         setContentView(buildContent());
     }
 
@@ -62,6 +63,12 @@ public class MainActivity extends Activity {
         accessibilityButton.setAllCaps(false);
         accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         root.addView(accessibilityButton, matchWrap());
+
+        Button diagnosticButton = new Button(this);
+        diagnosticButton.setText("查看诊断日志");
+        diagnosticButton.setAllCaps(false);
+        diagnosticButton.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticActivity.class)));
+        root.addView(diagnosticButton, matchWrap());
 
         selectedCountView = text("", 14, Color.rgb(51, 65, 85), false);
         selectedCountView.setPadding(0, dp(14), 0, dp(8));
@@ -100,11 +107,13 @@ public class MainActivity extends Activity {
                     current.remove(app.packageName);
                 }
                 RuleStore.saveBlockedPackages(this, current);
+                DiagnosticLogger.log(this, "rule", (isChecked ? "blocked " : "unblocked ") + app.packageName + " label=" + app.label);
                 updateSelectedCount();
             });
             appList.addView(checkBox, matchWrap());
         }
 
+        DiagnosticLogger.log(this, "main", "loaded launchable apps=" + apps.size() + " selected=" + selected.size());
         updateSelectedCount();
     }
 
@@ -148,6 +157,7 @@ public class MainActivity extends Activity {
         boolean enabled = isAccessibilityServiceEnabled();
         serviceStatusView.setText(enabled ? "状态：拦截服务已开启" : "状态：还没有开启无障碍服务");
         serviceStatusView.setTextColor(enabled ? Color.rgb(22, 101, 52) : Color.rgb(185, 28, 28));
+        DiagnosticLogger.log(this, "main", "onResume serviceEnabled=" + enabled + " selected=" + RuleStore.getBlockedPackages(this).size());
         updateSelectedCount();
     }
 
