@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">瘾头破坏器</string>
+    <string name="accessibility_service_name">瘾头破坏器拦截服务</string>
+    <string name="accessibility_description">检测当前打开的应用，并在命中你选择的应用时显示延迟挑战。所有数据只保存在本机。</string>
+</resources>
