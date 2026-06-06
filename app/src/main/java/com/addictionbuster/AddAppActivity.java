@@ -117,11 +117,17 @@ public class AddAppActivity extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, dp(10), 0, dp(10));
 
+        LinearLayout appButton = new LinearLayout(this);
+        appButton.setOrientation(LinearLayout.HORIZONTAL);
+        appButton.setGravity(Gravity.CENTER_VERTICAL);
+        appButton.setClickable(true);
+        appButton.setFocusable(true);
+
         ImageView icon = new ImageView(this);
         icon.setImageDrawable(AppCatalog.loadIcon(this, app.packageName));
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(44), dp(44));
         iconParams.setMargins(0, 0, dp(12), 0);
-        row.addView(icon, iconParams);
+        appButton.addView(icon, iconParams);
 
         LinearLayout textBox = new LinearLayout(this);
         textBox.setOrientation(LinearLayout.VERTICAL);
@@ -129,7 +135,13 @@ public class AddAppActivity extends Activity {
         TextView label = text(app.label, 16, Color.rgb(15, 23, 42), true);
         textBox.addView(label, matchWrap());
 
-        row.addView(textBox, new LinearLayout.LayoutParams(
+        appButton.addView(textBox, new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        ));
+
+        row.addView(appButton, new LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
@@ -139,26 +151,44 @@ public class AddAppActivity extends Activity {
         toggle.setChecked(checked);
         row.addView(toggle);
 
-        row.setOnClickListener(v -> toggleBlocked(app, toggle));
-        toggle.setOnClickListener(v -> toggleBlocked(app, toggle));
+        appButton.setOnClickListener(v -> handleAppClick(app, toggle));
+        toggle.setOnClickListener(v -> toggleBlockedFromSwitch(app, toggle));
         return row;
     }
 
-    private void toggleBlocked(AppInfo app, PillToggleView toggle) {
-        Set<String> current = RuleStore.getBlockedPackages(this);
-        boolean nextChecked = !current.contains(app.packageName);
-        if (nextChecked) {
-            current.add(app.packageName);
-        } else {
-            current.remove(app.packageName);
-            RuleStore.clearAppRule(this, app.packageName);
-        }
-        RuleStore.saveBlockedPackages(this, current);
-        toggle.setChecked(nextChecked);
-        DiagnosticLogger.log(this, "rule", (nextChecked ? "blocked " : "unblocked ") + app.packageName + " label=" + app.label);
-        if (nextChecked) {
+    private void handleAppClick(AppInfo app, PillToggleView toggle) {
+        if (RuleStore.isBlocked(this, app.packageName)) {
+            DiagnosticLogger.log(this, "rule", "open rule from app row package=" + app.packageName + " label=" + app.label);
             startActivity(AppRuleActivity.intentFor(this, app.packageName, app.label));
+            return;
         }
+        enableBlockedApp(app, toggle);
+    }
+
+    private void toggleBlockedFromSwitch(AppInfo app, PillToggleView toggle) {
+        if (RuleStore.isBlocked(this, app.packageName)) {
+            disableBlockedApp(app, toggle);
+            return;
+        }
+        enableBlockedApp(app, toggle);
+    }
+
+    private void enableBlockedApp(AppInfo app, PillToggleView toggle) {
+        Set<String> current = RuleStore.getBlockedPackages(this);
+        current.add(app.packageName);
+        RuleStore.saveBlockedPackages(this, current);
+        toggle.setChecked(true);
+        DiagnosticLogger.log(this, "rule", "blocked " + app.packageName + " label=" + app.label);
+        startActivity(AppRuleActivity.intentFor(this, app.packageName, app.label));
+    }
+
+    private void disableBlockedApp(AppInfo app, PillToggleView toggle) {
+        Set<String> current = RuleStore.getBlockedPackages(this);
+        current.remove(app.packageName);
+        RuleStore.saveBlockedPackages(this, current);
+        RuleStore.clearAppRule(this, app.packageName);
+        toggle.setChecked(false);
+        DiagnosticLogger.log(this, "rule", "unblocked " + app.packageName + " label=" + app.label);
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {

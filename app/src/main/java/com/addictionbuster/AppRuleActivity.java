@@ -1,10 +1,13 @@
 package com.addictionbuster;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -73,6 +76,11 @@ public class AppRuleActivity extends Activity {
         packageView.setPadding(0, dp(4), 0, dp(16));
         root.addView(packageView, matchWrap());
 
+        LinearLayout permissionGuide = permissionGuide();
+        if (permissionGuide != null) {
+            root.addView(permissionGuide, matchWrap());
+        }
+
         AppRule rule = RuleStore.getAppRule(this, packageName);
         dailyQuotaInput = numberInput(rule.dailyQuotaMinutes);
         sessionLimitInput = numberInput(rule.sessionLimitMinutes);
@@ -108,6 +116,52 @@ public class AppRuleActivity extends Activity {
         root.addView(hint, matchWrap());
 
         return scrollView;
+    }
+
+    private LinearLayout permissionGuide() {
+        boolean accessibilityEnabled = isAccessibilityServiceEnabled();
+        boolean mediaEnabled = isNotificationListenerEnabled();
+        if (accessibilityEnabled && mediaEnabled) {
+            return null;
+        }
+
+        LinearLayout guide = new LinearLayout(this);
+        guide.setOrientation(LinearLayout.VERTICAL);
+        guide.setPadding(dp(12), dp(10), dp(12), dp(12));
+
+        TextView title = text("首次使用前先开启权限", 17, Color.rgb(185, 28, 28), true);
+        guide.addView(title, matchWrap());
+
+        TextView body = text(
+                "必需：开启无障碍拦截服务，才能识别并拦截前台 App。\n"
+                        + "可选：开启后台媒体阻断，才能尝试暂停后台播放声音。",
+                14,
+                Color.rgb(51, 65, 85),
+                false
+        );
+        body.setPadding(0, dp(6), 0, dp(8));
+        guide.addView(body, matchWrap());
+
+        if (!accessibilityEnabled) {
+            Button accessibilityButton = new Button(this);
+            accessibilityButton.setText("去开启无障碍拦截服务");
+            accessibilityButton.setAllCaps(false);
+            accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+            guide.addView(accessibilityButton, matchWrap());
+        }
+
+        if (!mediaEnabled) {
+            Button mediaButton = new Button(this);
+            mediaButton.setText("了解后台媒体阻断权限");
+            mediaButton.setAllCaps(false);
+            mediaButton.setOnClickListener(v -> startActivity(new Intent(this, NotificationAccessGuideActivity.class)));
+            guide.addView(mediaButton, matchWrap());
+        }
+
+        TextView hint = text("规则可以先保存；权限开启后，下一次打开这个应用才会真正拦截。", 13, Color.rgb(100, 116, 139), false);
+        hint.setPadding(0, dp(6), 0, 0);
+        guide.addView(hint, matchWrap());
+        return guide;
     }
 
     private LinearLayout field(String title, String hint, EditText input) {
@@ -180,6 +234,39 @@ public class AppRuleActivity extends Activity {
         } catch (NumberFormatException ignored) {
             return fallback;
         }
+    }
+
+    private boolean isAccessibilityServiceEnabled() {
+        ComponentName expected = new ComponentName(this, BusterAccessibilityService.class);
+        String enabledServices = Settings.Secure.getString(
+                getContentResolver(),
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        );
+        return containsFlattenedComponent(enabledServices, expected);
+    }
+
+    private boolean isNotificationListenerEnabled() {
+        ComponentName expected = new ComponentName(this, BusterNotificationListenerService.class);
+        String enabledListeners = Settings.Secure.getString(
+                getContentResolver(),
+                "enabled_notification_listeners"
+        );
+        return containsFlattenedComponent(enabledListeners, expected);
+    }
+
+    private boolean containsFlattenedComponent(String values, ComponentName expected) {
+        if (values == null) {
+            return false;
+        }
+        String expectedName = expected.flattenToString();
+        TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');
+        splitter.setString(values);
+        while (splitter.hasNext()) {
+            if (expectedName.equalsIgnoreCase(splitter.next())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {
