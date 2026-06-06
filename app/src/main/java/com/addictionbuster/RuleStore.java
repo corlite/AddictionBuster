@@ -98,6 +98,13 @@ final class RuleStore {
         return Math.max(0L, (untilMillis - System.currentTimeMillis()) / 1000L);
     }
 
+    static long getPassthroughUntilMillis(Context context, String packageName) {
+        if (!hasPassthrough(context, packageName)) {
+            return 0L;
+        }
+        return prefs(context).getLong(KEY_PASSTHROUGH_UNTIL_MILLIS, 0L);
+    }
+
     static String getChallengePackage(Context context) {
         return prefs(context).getString(KEY_CHALLENGE_PACKAGE, null);
     }

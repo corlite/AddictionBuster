@@ -33,6 +33,7 @@ public class BusterAccessibilityService extends AccessibilityService {
     private Button overlayFiveMinuteButton;
     private Button overlayTenMinuteButton;
     private Runnable overlayTick;
+    private Runnable passthroughExpiryCheck;
     private String overlayTargetPackage;
     private int overlayRemaining;
 
@@ -41,6 +42,7 @@ public class BusterAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         RuleStore.clearChallengePackage(this);
+        BackgroundMediaBlocker.enforce(this, "accessibility service connected");
         DiagnosticLogger.log(this, "service", "connected blockedPackages=" + RuleStore.getBlockedPackages(this));
     }
 
@@ -84,12 +86,14 @@ public class BusterAccessibilityService extends AccessibilityService {
         }
 
         RuleStore.clearExpiredPassthrough(this);
+        BackgroundMediaBlocker.enforce(this, "window event package=" + packageName);
 
         if (!blocked) {
             DiagnosticLogger.log(this, "service", "allow because package is not blocked: " + packageName);
             return;
         }
         if (passthrough) {
+            schedulePassthroughExpiryCheck(packageName);
             DiagnosticLogger.log(this, "service", "allow because passthrough is active: " + packageName + " remainingSeconds=" + passthroughRemainingSeconds);
             return;
         }
@@ -115,6 +119,10 @@ public class BusterAccessibilityService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        if (passthroughExpiryCheck != null) {
+            handler.removeCallbacks(passthroughExpiryCheck);
+            passthroughExpiryCheck = null;
+        }
         removeChallengeOverlay("service destroyed", true);
         super.onDestroy();
     }
@@ -125,6 +133,7 @@ public class BusterAccessibilityService extends AccessibilityService {
             return;
         }
 
+        BackgroundMediaBlocker.enforce(this, "show challenge overlay package=" + packageName);
         RuleStore.setChallengePackage(this, packageName);
         overlayTargetPackage = packageName;
         overlayRemaining = CHALLENGE_SECONDS;
@@ -243,6 +252,7 @@ public class BusterAccessibilityService extends AccessibilityService {
         String packageName = overlayTargetPackage;
         DiagnosticLogger.log(this, "challenge", "overlay continue package=" + packageName + " minutes=" + minutes);
         RuleStore.grantPassthrough(this, packageName, minutes);
+        schedulePassthroughExpiryCheck(packageName);
         removeChallengeOverlay("continue", false);
 
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
@@ -315,6 +325,25 @@ public class BusterAccessibilityService extends AccessibilityService {
         } catch (PackageManager.NameNotFoundException ignored) {
             return packageName;
         }
+    }
+
+    private void schedulePassthroughExpiryCheck(String packageName) {
+        long untilMillis = RuleStore.getPassthroughUntilMillis(this, packageName);
+        if (untilMillis <= 0L) {
+            return;
+        }
+
+        long delayMillis = Math.max(1000L, untilMillis - System.currentTimeMillis() + 500L);
+        if (passthroughExpiryCheck != null) {
+            handler.removeCallbacks(passthroughExpiryCheck);
+        }
+        passthroughExpiryCheck = () -> {
+            DiagnosticLogger.log(this, "media", "passthrough expiry check package=" + packageName);
+            RuleStore.clearExpiredPassthrough(this);
+            BackgroundMediaBlocker.enforce(this, "passthrough expired package=" + packageName);
+        };
+        handler.postDelayed(passthroughExpiryCheck, delayMillis);
+        DiagnosticLogger.log(this, "media", "scheduled passthrough expiry check package=" + packageName + " delayMillis=" + delayMillis);
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {

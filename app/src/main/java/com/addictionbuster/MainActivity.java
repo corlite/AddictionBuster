@@ -27,6 +27,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity {
     private TextView serviceStatusView;
+    private TextView mediaStatusView;
     private TextView selectedCountView;
 
     @Override
@@ -63,6 +64,16 @@ public class MainActivity extends Activity {
         accessibilityButton.setAllCaps(false);
         accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         root.addView(accessibilityButton, matchWrap());
+
+        mediaStatusView = text("", 14, Color.rgb(30, 64, 175), false);
+        mediaStatusView.setPadding(0, dp(8), 0, 0);
+        root.addView(mediaStatusView);
+
+        Button notificationAccessButton = new Button(this);
+        notificationAccessButton.setText("开启后台媒体阻断");
+        notificationAccessButton.setAllCaps(false);
+        notificationAccessButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        root.addView(notificationAccessButton, matchWrap());
 
         Button diagnosticButton = new Button(this);
         diagnosticButton.setText("查看诊断日志");
@@ -157,7 +168,12 @@ public class MainActivity extends Activity {
         boolean enabled = isAccessibilityServiceEnabled();
         serviceStatusView.setText(enabled ? "状态：拦截服务已开启" : "状态：还没有开启无障碍服务");
         serviceStatusView.setTextColor(enabled ? Color.rgb(22, 101, 52) : Color.rgb(185, 28, 28));
-        DiagnosticLogger.log(this, "main", "onResume serviceEnabled=" + enabled + " selected=" + RuleStore.getBlockedPackages(this).size());
+        boolean mediaEnabled = isNotificationListenerEnabled();
+        if (mediaStatusView != null) {
+            mediaStatusView.setText(mediaEnabled ? "状态：后台媒体阻断已开启" : "状态：还没有开启通知访问，后台播放可能无法阻断");
+            mediaStatusView.setTextColor(mediaEnabled ? Color.rgb(22, 101, 52) : Color.rgb(185, 28, 28));
+        }
+        DiagnosticLogger.log(this, "main", "onResume serviceEnabled=" + enabled + " mediaEnabled=" + mediaEnabled + " selected=" + RuleStore.getBlockedPackages(this).size());
         updateSelectedCount();
     }
 
@@ -181,6 +197,26 @@ public class MainActivity extends Activity {
         String expectedName = expected.flattenToString();
         TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');
         splitter.setString(enabledServices);
+        while (splitter.hasNext()) {
+            if (expectedName.equalsIgnoreCase(splitter.next())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isNotificationListenerEnabled() {
+        ComponentName expected = new ComponentName(this, BusterNotificationListenerService.class);
+        String enabledListeners = Settings.Secure.getString(
+                getContentResolver(),
+                "enabled_notification_listeners"
+        );
+        if (enabledListeners == null) {
+            return false;
+        }
+        String expectedName = expected.flattenToString();
+        TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(':');
+        splitter.setString(enabledListeners);
         while (splitter.hasNext()) {
             if (expectedName.equalsIgnoreCase(splitter.next())) {
                 return true;
