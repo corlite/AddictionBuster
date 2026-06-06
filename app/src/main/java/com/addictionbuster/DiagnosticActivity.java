@@ -154,6 +154,10 @@ public class DiagnosticActivity extends Activity {
         boolean accessibilityEnabled = isAccessibilityServiceEnabled();
         boolean mediaEnabled = isNotificationListenerEnabled();
         int blockedCount = RuleStore.getBlockedPackages(this).size();
+        int phoneWhitelistCount = RuleStore.getPhoneWhitelistPackages(this).size();
+        int phoneDailyLimit = RuleStore.getPhoneDailyLimitMinutes(this);
+        int phoneSessionLimit = RuleStore.getPhoneSessionLimitMinutes(this);
+        long phoneUsedMinutes = RuleStore.getPhoneDailyUsedSeconds(this) / 60L;
         String latestLine = DiagnosticLogger.lastImportantLine(this);
 
         statusView.setText(
@@ -161,6 +165,9 @@ public class DiagnosticActivity extends Activity {
                         + "无障碍拦截：" + (accessibilityEnabled ? "已开启" : "未开启") + "\n"
                         + "后台媒体阻断：" + (mediaEnabled ? "已开启" : "未开启") + "\n"
                         + "生效应用：" + blockedCount + " 个\n"
+                        + "手机时长：每日 " + limitText(phoneDailyLimit) + "，单次 " + limitText(phoneSessionLimit) + "\n"
+                        + "今日手机已统计：" + phoneUsedMinutes + " 分钟\n"
+                        + "手机白名单：" + phoneWhitelistCount + " 个自选应用\n"
                         + "日志保留：自动保留最近 1 小时，每分钟检查一次\n"
                         + "最近关键事件：" + latestLine
         );
@@ -206,10 +213,18 @@ public class DiagnosticActivity extends Activity {
                 + "无障碍拦截：" + (isAccessibilityServiceEnabled() ? "已开启" : "未开启") + "\n"
                 + "后台媒体阻断：" + (isNotificationListenerEnabled() ? "已开启" : "未开启") + "\n"
                 + "生效应用：" + RuleStore.getBlockedPackages(this).size() + " 个\n"
+                + "手机时长每日限制：" + limitText(RuleStore.getPhoneDailyLimitMinutes(this)) + "\n"
+                + "手机时长单次限制：" + limitText(RuleStore.getPhoneSessionLimitMinutes(this)) + "\n"
+                + "今日手机已统计：" + (RuleStore.getPhoneDailyUsedSeconds(this) / 60L) + " 分钟\n"
+                + "手机白名单：" + RuleStore.getPhoneWhitelistPackages(this).size() + " 个自选应用\n"
                 + "最近关键事件：" + DiagnosticLogger.lastImportantLine(this) + "\n\n"
                 + "提示：日志可能包含应用名称和包名，用于判断拦截命中的目标。\n\n"
                 + "最近 1 小时日志：\n"
                 + DiagnosticLogger.readRecent(this, 60);
+    }
+
+    private String limitText(int minutes) {
+        return minutes <= 0 ? "未开启" : minutes + " 分钟";
     }
 
     private void clearLog() {

@@ -1,9 +1,13 @@
 package com.addictionbuster;
 
 import android.accessibilityservice.AccessibilityService;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
@@ -41,6 +45,8 @@ public class BusterAccessibilityService extends AccessibilityService {
     private Runnable overlayTick;
     private Runnable overlayUnhide;
     private Runnable passthroughExpiryCheck;
+    private Runnable phoneUsageTick;
+    private BroadcastReceiver screenReceiver;
     private AppRule overlayRule;
     private String overlayTargetPackage;
     private int overlayRemaining;
@@ -48,12 +54,17 @@ public class BusterAccessibilityService extends AccessibilityService {
     private int overlayHideCount;
     private String currentForegroundPackage;
     private long foregroundStartedAtMillis;
+    private long phoneSessionUsedMillis;
+    private View phoneLimitOverlay;
+    private String phoneLimitOverlayPackage;
 
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         RuleStore.clearChallengePackage(this);
+        registerScreenReceiver();
+        startPhoneUsageTick();
         BackgroundMediaBlocker.enforce(this, "accessibility service connected");
         DiagnosticLogger.log(this, "service", "connected blockedPackages=" + RuleStore.getBlockedPackages(this));
     }
@@ -101,6 +112,12 @@ public class BusterAccessibilityService extends AccessibilityService {
         RuleStore.clearExpiredPassthrough(this);
         BackgroundMediaBlocker.enforce(this, "window event package=" + packageName);
 
+        if (shouldEnforcePhoneLimit(packageName)) {
+            showPhoneLimitOverlay(packageName, loadLabel(packageName));
+            DiagnosticLogger.log(this, "service", "block by phone limit package=" + packageName);
+            return;
+        }
+
         if (!blocked) {
             DiagnosticLogger.log(this, "service", "allow because package is not blocked: " + packageName);
             return;
@@ -142,16 +159,16 @@ public class BusterAccessibilityService extends AccessibilityService {
         if (currentForegroundPackage == null || foregroundStartedAtMillis <= 0L) {
             return;
         }
-        if (!RuleStore.isBlocked(this, currentForegroundPackage)) {
-            foregroundStartedAtMillis = System.currentTimeMillis();
-            return;
-        }
-        if (!force && !RuleStore.hasPassthrough(this, currentForegroundPackage)) {
-            foregroundStartedAtMillis = System.currentTimeMillis();
-            return;
-        }
         long now = System.currentTimeMillis();
-        RuleStore.addDailyUsageMillis(this, currentForegroundPackage, now - foregroundStartedAtMillis, reason);
+        long elapsedMillis = now - foregroundStartedAtMillis;
+        if (shouldCountPhoneUsage(currentForegroundPackage)) {
+            RuleStore.addPhoneUsageMillis(this, elapsedMillis, currentForegroundPackage, reason);
+            phoneSessionUsedMillis += elapsedMillis;
+        }
+        if (RuleStore.isBlocked(this, currentForegroundPackage)
+                && (force || RuleStore.hasPassthrough(this, currentForegroundPackage))) {
+            RuleStore.addDailyUsageMillis(this, currentForegroundPackage, elapsedMillis, reason);
+        }
         foregroundStartedAtMillis = now;
     }
 
@@ -163,12 +180,186 @@ public class BusterAccessibilityService extends AccessibilityService {
     @Override
     public void onDestroy() {
         addCurrentForegroundUsage("service destroyed", false);
+        if (phoneUsageTick != null) {
+            handler.removeCallbacks(phoneUsageTick);
+            phoneUsageTick = null;
+        }
         if (passthroughExpiryCheck != null) {
             handler.removeCallbacks(passthroughExpiryCheck);
             passthroughExpiryCheck = null;
         }
+        unregisterScreenReceiver();
+        removePhoneLimitOverlay("service destroyed");
         removeChallengeOverlay("service destroyed", true);
         super.onDestroy();
+    }
+
+    private void registerScreenReceiver() {
+        if (screenReceiver != null) {
+            return;
+        }
+        screenReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent == null ? "" : intent.getAction();
+                if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                    addCurrentForegroundUsage("screen off", false);
+                    phoneSessionUsedMillis = 0L;
+                    currentForegroundPackage = null;
+                    foregroundStartedAtMillis = 0L;
+                    removePhoneLimitOverlay("screen off");
+                    DiagnosticLogger.log(BusterAccessibilityService.this, "usage", "phone session reset by screen off");
+                } else if (Intent.ACTION_USER_PRESENT.equals(action) || Intent.ACTION_SCREEN_ON.equals(action)) {
+                    phoneSessionUsedMillis = 0L;
+                    foregroundStartedAtMillis = System.currentTimeMillis();
+                    DiagnosticLogger.log(BusterAccessibilityService.this, "usage", "phone session reset by " + action);
+                }
+            }
+        };
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(screenReceiver, filter);
+        }
+    }
+
+    private void unregisterScreenReceiver() {
+        if (screenReceiver == null) {
+            return;
+        }
+        try {
+            unregisterReceiver(screenReceiver);
+        } catch (RuntimeException ignored) {
+        }
+        screenReceiver = null;
+    }
+
+    private void startPhoneUsageTick() {
+        if (phoneUsageTick != null) {
+            handler.removeCallbacks(phoneUsageTick);
+        }
+        phoneUsageTick = new Runnable() {
+            @Override
+            public void run() {
+                addCurrentForegroundUsage("phone usage tick", false);
+                if (currentForegroundPackage != null && shouldEnforcePhoneLimit(currentForegroundPackage)) {
+                    showPhoneLimitOverlay(currentForegroundPackage, loadLabel(currentForegroundPackage));
+                }
+                handler.postDelayed(this, 1000L);
+            }
+        };
+        handler.postDelayed(phoneUsageTick, 1000L);
+    }
+
+    private boolean shouldCountPhoneUsage(String packageName) {
+        return RuleStore.hasPhoneLimits(this)
+                && challengeOverlay == null
+                && phoneLimitOverlay == null
+                && !RuleStore.isPhoneWhitelist(this, packageName);
+    }
+
+    private boolean shouldEnforcePhoneLimit(String packageName) {
+        if (!RuleStore.hasPhoneLimits(this) || RuleStore.isPhoneWhitelist(this, packageName)) {
+            return false;
+        }
+        return RuleStore.getPhoneDailyRemainingSeconds(this) <= 0L || getPhoneSessionRemainingSeconds() <= 0L;
+    }
+
+    private long getPhoneSessionRemainingSeconds() {
+        int sessionLimitMinutes = RuleStore.getPhoneSessionLimitMinutes(this);
+        if (sessionLimitMinutes <= 0) {
+            return Long.MAX_VALUE;
+        }
+        return Math.max(0L, sessionLimitMinutes * 60L - phoneSessionUsedMillis / 1000L);
+    }
+
+    private void showPhoneLimitOverlay(String packageName, String label) {
+        if (phoneLimitOverlay != null) {
+            DiagnosticLogger.log(this, "phone-limit", "overlay already visible package=" + phoneLimitOverlayPackage);
+            return;
+        }
+        if (challengeOverlay != null) {
+            removeChallengeOverlay("phone limit reached", true);
+        }
+
+        RuleStore.clearPassthrough(this);
+        phoneLimitOverlayPackage = packageName;
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setPadding(dp(24), dp(54), dp(24), dp(24));
+        root.setBackgroundColor(Color.rgb(248, 250, 252));
+        root.setClickable(true);
+        root.setFocusable(true);
+        root.setFocusableInTouchMode(true);
+
+        TextView eyebrow = text("手机时长已到", 18, Color.rgb(185, 28, 28), true);
+        eyebrow.setGravity(Gravity.CENTER);
+        root.addView(eyebrow, matchWrap());
+
+        TextView title = text("先放下手机\n" + label, 28, Color.rgb(15, 23, 42), true);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(18), 0, dp(16));
+        root.addView(title, matchWrap());
+
+        String reason = RuleStore.getPhoneDailyRemainingSeconds(this) <= 0L
+                ? "今天的手机总时长已经用完。"
+                : "这次打开手机的连续使用时长已经用完。";
+        TextView body = text(reason + "\n白名单应用不会被计入，也不会被这里拦截。", 17, Color.rgb(71, 85, 105), false);
+        body.setGravity(Gravity.CENTER);
+        body.setPadding(0, 0, 0, dp(26));
+        root.addView(body, matchWrap());
+
+        Button quitButton = new Button(this);
+        quitButton.setText("回到桌面");
+        quitButton.setAllCaps(false);
+        quitButton.setOnClickListener(v -> {
+            removePhoneLimitOverlay("home button");
+            performGlobalAction(GLOBAL_ACTION_HOME);
+        });
+        root.addView(quitButton, matchWrap());
+
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+        );
+        params.gravity = Gravity.TOP | Gravity.START;
+
+        try {
+            if (windowManager == null) {
+                windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            }
+            windowManager.addView(root, params);
+            phoneLimitOverlay = root;
+            DiagnosticLogger.log(this, "phone-limit", "show overlay package=" + packageName
+                    + " dailyRemainingSeconds=" + RuleStore.getPhoneDailyRemainingSeconds(this)
+                    + " sessionRemainingSeconds=" + getPhoneSessionRemainingSeconds());
+        } catch (RuntimeException exception) {
+            DiagnosticLogger.log(this, "phone-limit", "failed to show overlay package=" + packageName + " error=" + exception);
+            performGlobalAction(GLOBAL_ACTION_HOME);
+        }
+    }
+
+    private void removePhoneLimitOverlay(String reason) {
+        if (phoneLimitOverlay != null && windowManager != null) {
+            try {
+                windowManager.removeView(phoneLimitOverlay);
+                DiagnosticLogger.log(this, "phone-limit", "remove overlay reason=" + reason + " package=" + phoneLimitOverlayPackage);
+            } catch (RuntimeException exception) {
+                DiagnosticLogger.log(this, "phone-limit", "failed to remove overlay reason=" + reason + " error=" + exception);
+            }
+        }
+        phoneLimitOverlay = null;
+        phoneLimitOverlayPackage = null;
     }
 
     private void showChallengeOverlay(String packageName, String label) {

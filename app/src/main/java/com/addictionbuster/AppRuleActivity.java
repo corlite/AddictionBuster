@@ -65,11 +65,29 @@ public class AppRuleActivity extends Activity {
         root.setBackgroundColor(Color.rgb(248, 250, 252));
         scrollView.addView(root);
 
-        TextView eyebrow = text("拦截规则", 16, Color.rgb(30, 64, 175), true);
-        root.addView(eyebrow, matchWrap());
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView title = text(label, 27, Color.rgb(15, 23, 42), true);
-        title.setPadding(0, dp(6), 0, 0);
+        TextView eyebrow = text("拦截规则", 30, Color.rgb(15, 23, 42), true);
+        header.addView(eyebrow, new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        ));
+
+        TextView saveLink = text("保存", 18, Color.rgb(37, 99, 235), true);
+        saveLink.setGravity(Gravity.CENTER);
+        saveLink.setPadding(dp(12), dp(6), 0, dp(6));
+        saveLink.setOnClickListener(v -> saveRule());
+        header.addView(saveLink, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        root.addView(header, matchWrap());
+
+        TextView title = text(label, 20, Color.rgb(15, 23, 42), true);
+        title.setPadding(0, dp(8), 0, 0);
         root.addView(title, matchWrap());
 
         TextView packageView = text(packageName, 13, Color.rgb(100, 116, 139), false);

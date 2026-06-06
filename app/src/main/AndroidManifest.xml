@@ -48,6 +48,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".PhoneWhitelistActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PhoneLimitActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

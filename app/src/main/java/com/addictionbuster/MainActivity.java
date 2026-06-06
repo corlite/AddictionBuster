@@ -54,6 +54,12 @@ public class MainActivity extends Activity {
         addParams.setMargins(0, dp(14), 0, dp(14));
         root.addView(addAppsButton, addParams);
 
+        Button phoneLimitButton = homeButton("手机时长限制", "设置每日总时长、单次打开手机时长和白名单");
+        phoneLimitButton.setOnClickListener(v -> startActivity(new Intent(this, PhoneLimitActivity.class)));
+        LinearLayout.LayoutParams phoneLimitParams = matchWrap();
+        phoneLimitParams.setMargins(0, 0, 0, dp(14));
+        root.addView(phoneLimitButton, phoneLimitParams);
+
         Button settingsButton = homeButton("设置", "开启权限、查看诊断日志");
         settingsButton.setOnClickListener(v -> startActivity(new Intent(this, AppSettingsActivity.class)));
         root.addView(settingsButton, matchWrap());

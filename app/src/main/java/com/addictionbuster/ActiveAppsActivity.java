@@ -32,13 +32,8 @@ public class ActiveAppsActivity extends Activity {
         TextView title = text("生效应用", 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView addLink = text("增加应用", 28, Color.rgb(37, 99, 235), true);
-        addLink.setPadding(0, dp(6), 0, dp(8));
-        addLink.setOnClickListener(v -> startActivity(new Intent(this, AddAppActivity.class)));
-        root.addView(addLink, matchWrap());
-
         TextView subtitle = text("这里显示已经启用拦截的所有应用。点进去可以查看和修改规则。", 15, Color.rgb(71, 85, 105), false);
-        subtitle.setPadding(0, 0, 0, dp(14));
+        subtitle.setPadding(0, dp(8), 0, dp(14));
         root.addView(subtitle, matchWrap());
 
         ScrollView scrollView = new ScrollView(this);
@@ -52,6 +47,7 @@ public class ActiveAppsActivity extends Activity {
         ));
 
         populateList(list);
+        addAddAppLink(list);
         return root;
     }
 
@@ -73,6 +69,13 @@ public class ActiveAppsActivity extends Activity {
             row.setOnClickListener(v -> startActivity(AppRuleActivity.intentFor(this, packageName, label)));
             list.addView(row, matchWrap());
         }
+    }
+
+    private void addAddAppLink(LinearLayout list) {
+        TextView addLink = text("增加应用", 20, Color.rgb(37, 99, 235), true);
+        addLink.setPadding(0, dp(16), 0, dp(8));
+        addLink.setOnClickListener(v -> startActivity(new Intent(this, AddAppActivity.class)));
+        list.addView(addLink, matchWrap());
     }
 
     private LinearLayout appRow(String packageName, String label) {

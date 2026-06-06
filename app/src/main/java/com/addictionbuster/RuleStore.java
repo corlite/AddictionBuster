@@ -13,6 +13,9 @@ import java.util.Set;
 final class RuleStore {
     private static final String PREFS_NAME = "addiction_buster_rules";
     private static final String KEY_BLOCKED_PACKAGES = "blocked_packages";
+    private static final String KEY_PHONE_WHITELIST_PACKAGES = "phone_whitelist_packages";
+    private static final String KEY_PHONE_DAILY_LIMIT_MINUTES = "phone_daily_limit_minutes";
+    private static final String KEY_PHONE_SESSION_LIMIT_MINUTES = "phone_session_limit_minutes";
     private static final String KEY_PASSTHROUGH_PACKAGE = "passthrough_package";
     private static final String KEY_PASSTHROUGH_UNTIL_MILLIS = "passthrough_until_millis";
     private static final String KEY_CHALLENGE_PACKAGE = "challenge_package";
@@ -27,6 +30,8 @@ final class RuleStore {
     private static final String USAGE_PREFIX = "usage.";
     private static final String FIELD_USAGE_DATE = ".date";
     private static final String FIELD_USAGE_SECONDS = ".seconds";
+    private static final String KEY_PHONE_USAGE_DATE = "phone_usage.date";
+    private static final String KEY_PHONE_USAGE_SECONDS = "phone_usage.seconds";
     private static final long MINUTE_MILLIS = 60_000L;
 
     private RuleStore() {
@@ -47,6 +52,52 @@ final class RuleStore {
 
     static boolean isBlocked(Context context, String packageName) {
         return getBlockedPackages(context).contains(packageName);
+    }
+
+    static int getPhoneDailyLimitMinutes(Context context) {
+        return Math.max(0, prefs(context).getInt(KEY_PHONE_DAILY_LIMIT_MINUTES, 0));
+    }
+
+    static int getPhoneSessionLimitMinutes(Context context) {
+        return Math.max(0, prefs(context).getInt(KEY_PHONE_SESSION_LIMIT_MINUTES, 0));
+    }
+
+    static void savePhoneLimits(Context context, int dailyLimitMinutes, int sessionLimitMinutes) {
+        prefs(context)
+                .edit()
+                .putInt(KEY_PHONE_DAILY_LIMIT_MINUTES, clamp(dailyLimitMinutes, 0, 1440))
+                .putInt(KEY_PHONE_SESSION_LIMIT_MINUTES, clamp(sessionLimitMinutes, 0, 240))
+                .apply();
+        DiagnosticLogger.log(context, "rule", "saved phone limits dailyMinutes=" + dailyLimitMinutes
+                + " sessionMinutes=" + sessionLimitMinutes);
+    }
+
+    static boolean hasPhoneLimits(Context context) {
+        return getPhoneDailyLimitMinutes(context) > 0 || getPhoneSessionLimitMinutes(context) > 0;
+    }
+
+    static Set<String> getPhoneWhitelistPackages(Context context) {
+        Set<String> stored = prefs(context).getStringSet(KEY_PHONE_WHITELIST_PACKAGES, Collections.emptySet());
+        return new HashSet<>(stored);
+    }
+
+    static void savePhoneWhitelistPackages(Context context, Set<String> packages) {
+        prefs(context)
+                .edit()
+                .putStringSet(KEY_PHONE_WHITELIST_PACKAGES, new HashSet<>(packages))
+                .apply();
+        DiagnosticLogger.log(context, "rule", "saved phone whitelist packages=" + packages);
+    }
+
+    static boolean isPhoneWhitelist(Context context, String packageName) {
+        if (packageName == null || packageName.trim().isEmpty()) {
+            return true;
+        }
+        if (context.getPackageName().equals(packageName)) {
+            return true;
+        }
+        return defaultPhoneWhitelistPackages().contains(packageName)
+                || getPhoneWhitelistPackages(context).contains(packageName);
     }
 
     static AppRule getAppRule(Context context, String packageName) {
@@ -113,6 +164,29 @@ final class RuleStore {
         return Math.max(0L, preferences.getLong(usageKey(packageName, FIELD_USAGE_SECONDS), 0L));
     }
 
+    static long getPhoneDailyUsedSeconds(Context context) {
+        SharedPreferences preferences = prefs(context);
+        String today = todayKey();
+        String storedDate = preferences.getString(KEY_PHONE_USAGE_DATE, "");
+        if (!today.equals(storedDate)) {
+            preferences
+                    .edit()
+                    .putString(KEY_PHONE_USAGE_DATE, today)
+                    .putLong(KEY_PHONE_USAGE_SECONDS, 0L)
+                    .apply();
+            return 0L;
+        }
+        return Math.max(0L, preferences.getLong(KEY_PHONE_USAGE_SECONDS, 0L));
+    }
+
+    static long getPhoneDailyRemainingSeconds(Context context) {
+        int dailyLimitMinutes = getPhoneDailyLimitMinutes(context);
+        if (dailyLimitMinutes <= 0) {
+            return Long.MAX_VALUE;
+        }
+        return Math.max(0L, dailyLimitMinutes * 60L - getPhoneDailyUsedSeconds(context));
+    }
+
     static long getDailyRemainingSeconds(Context context, String packageName, AppRule rule) {
         if (rule.dailyQuotaMinutes <= 0) {
             return Long.MAX_VALUE;
@@ -142,6 +216,30 @@ final class RuleStore {
                 + " addSeconds=" + addSeconds
                 + " totalSeconds=" + nextSeconds
                 + " reason=" + reason);
+    }
+
+    static long addPhoneUsageMillis(Context context, long millis, String packageName, String reason) {
+        if (millis <= 0L) {
+            return getPhoneDailyUsedSeconds(context);
+        }
+        SharedPreferences preferences = prefs(context);
+        String today = todayKey();
+        String storedDate = preferences.getString(KEY_PHONE_USAGE_DATE, "");
+        long currentSeconds = today.equals(storedDate)
+                ? Math.max(0L, preferences.getLong(KEY_PHONE_USAGE_SECONDS, 0L))
+                : 0L;
+        long addSeconds = Math.max(1L, millis / 1000L);
+        long nextSeconds = currentSeconds + addSeconds;
+        preferences
+                .edit()
+                .putString(KEY_PHONE_USAGE_DATE, today)
+                .putLong(KEY_PHONE_USAGE_SECONDS, nextSeconds)
+                .apply();
+        DiagnosticLogger.log(context, "usage", "add phone usage package=" + packageName
+                + " addSeconds=" + addSeconds
+                + " totalSeconds=" + nextSeconds
+                + " reason=" + reason);
+        return nextSeconds;
     }
 
     static void grantPassthrough(Context context, String packageName, int minutes) {
@@ -243,6 +341,30 @@ final class RuleStore {
 
     private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static Set<String> defaultPhoneWhitelistPackages() {
+        Set<String> packages = new HashSet<>();
+        packages.add("android");
+        packages.add("com.android.systemui");
+        packages.add("com.android.settings");
+        packages.add("com.google.android.settings");
+        packages.add("com.android.phone");
+        packages.add("com.google.android.dialer");
+        packages.add("com.android.dialer");
+        packages.add("com.android.contacts");
+        packages.add("com.google.android.contacts");
+        packages.add("com.android.mms");
+        packages.add("com.google.android.apps.messaging");
+        packages.add("com.google.android.inputmethod.latin");
+        packages.add("com.android.inputmethod.latin");
+        packages.add("com.miui.home");
+        packages.add("com.huawei.android.launcher");
+        packages.add("com.oppo.launcher");
+        packages.add("com.vivo.launcher");
+        packages.add("com.android.launcher");
+        packages.add("com.android.launcher3");
+        return packages;
     }
 
     private static String todayKey() {
