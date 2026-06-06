@@ -2,7 +2,6 @@ package com.addictionbuster;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Handler;
@@ -13,9 +12,12 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.util.Random;
 import java.util.Set;
 
 public class BusterAccessibilityService extends AccessibilityService {
@@ -23,19 +25,27 @@ public class BusterAccessibilityService extends AccessibilityService {
     static final String EXTRA_TARGET_LABEL = "target_label";
     private static final int WINDOW_EVENT_TYPES =
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED | AccessibilityEvent.TYPE_WINDOWS_CHANGED;
-    private static final int CHALLENGE_SECONDS = 15;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Random random = new Random();
     private WindowManager windowManager;
     private View challengeOverlay;
     private TextView overlayTimerView;
     private TextView overlayBreathView;
     private Button overlayFiveMinuteButton;
     private Button overlayTenMinuteButton;
+    private FrameLayout overlayActionArea;
+    private Button overlayActionButton;
+    private EditText overlayConfirmInput;
+    private Button overlayConfirmButton;
     private Runnable overlayTick;
+    private Runnable overlayUnhide;
     private Runnable passthroughExpiryCheck;
+    private AppRule overlayRule;
     private String overlayTargetPackage;
     private int overlayRemaining;
+    private int overlayTapCount;
+    private int overlayHideCount;
 
     @Override
     protected void onServiceConnected() {
@@ -136,7 +146,10 @@ public class BusterAccessibilityService extends AccessibilityService {
         BackgroundMediaBlocker.enforce(this, "show challenge overlay package=" + packageName);
         RuleStore.setChallengePackage(this, packageName);
         overlayTargetPackage = packageName;
-        overlayRemaining = CHALLENGE_SECONDS;
+        overlayRule = RuleStore.getAppRule(this, packageName);
+        overlayRemaining = overlayRule.waitSeconds;
+        overlayTapCount = 0;
+        overlayHideCount = 0;
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -166,18 +179,41 @@ public class BusterAccessibilityService extends AccessibilityService {
         overlayBreathView.setPadding(0, 0, 0, dp(28));
         root.addView(overlayBreathView, matchWrap());
 
+        overlayActionArea = new FrameLayout(this);
+        overlayActionArea.setMinimumHeight(dp(170));
+        overlayActionArea.setVisibility(View.GONE);
+        overlayActionButton = new Button(this);
+        overlayActionButton.setAllCaps(false);
+        overlayActionButton.setOnClickListener(v -> handleOverlayActionClick());
+        overlayActionArea.addView(overlayActionButton, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        root.addView(overlayActionArea, matchWrap());
+
+        overlayConfirmInput = new EditText(this);
+        overlayConfirmInput.setSingleLine(true);
+        overlayConfirmInput.setHint("输入确认文字");
+        overlayConfirmInput.setVisibility(View.GONE);
+        root.addView(overlayConfirmInput, matchWrap());
+
+        overlayConfirmButton = new Button(this);
+        overlayConfirmButton.setText("确认文字");
+        overlayConfirmButton.setAllCaps(false);
+        overlayConfirmButton.setVisibility(View.GONE);
+        overlayConfirmButton.setOnClickListener(v -> validateOverlayConfirm());
+        root.addView(overlayConfirmButton, matchWrap());
+
         overlayFiveMinuteButton = new Button(this);
-        overlayFiveMinuteButton.setText("请先完成呼吸");
+        overlayFiveMinuteButton.setText("请先完成挑战");
         overlayFiveMinuteButton.setAllCaps(false);
         overlayFiveMinuteButton.setEnabled(false);
-        overlayFiveMinuteButton.setOnClickListener(v -> continueFromOverlay(5));
         root.addView(overlayFiveMinuteButton, matchWrap());
 
         overlayTenMinuteButton = new Button(this);
-        overlayTenMinuteButton.setText("请先完成呼吸");
+        overlayTenMinuteButton.setText("请先完成挑战");
         overlayTenMinuteButton.setAllCaps(false);
         overlayTenMinuteButton.setEnabled(false);
-        overlayTenMinuteButton.setOnClickListener(v -> continueFromOverlay(10));
         root.addView(overlayTenMinuteButton, matchWrap());
 
         Button quitButton = new Button(this);
@@ -186,7 +222,7 @@ public class BusterAccessibilityService extends AccessibilityService {
         quitButton.setOnClickListener(v -> goHomeFromOverlay());
         root.addView(quitButton, matchWrap());
 
-        TextView hint = text("完成后可选择本次使用 5 分钟或 10 分钟。时间到期后，再打开会重新拦截。", 14, Color.rgb(100, 116, 139), false);
+        TextView hint = text("完成规则后会按本次使用上限放行。时间到期后，再打开会重新拦截。", 14, Color.rgb(100, 116, 139), false);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(22), 0, 0);
         root.addView(hint, matchWrap());
@@ -206,7 +242,11 @@ public class BusterAccessibilityService extends AccessibilityService {
             }
             windowManager.addView(root, params);
             challengeOverlay = root;
-            DiagnosticLogger.log(this, "challenge", "show overlay package=" + packageName + " label=" + label);
+            DiagnosticLogger.log(this, "challenge", "show overlay package=" + packageName + " label=" + label
+                    + " waitSeconds=" + overlayRule.waitSeconds
+                    + " requiredTaps=" + overlayRule.requiredTaps
+                    + " hiddenCount=" + overlayRule.hiddenCount
+                    + " confirmTextLength=" + overlayRule.confirmText.length());
             startOverlayCountdown();
         } catch (RuntimeException exception) {
             DiagnosticLogger.log(this, "challenge", "failed to show overlay package=" + packageName + " error=" + exception);
@@ -221,12 +261,8 @@ public class BusterAccessibilityService extends AccessibilityService {
             public void run() {
                 updateOverlayCountdown();
                 if (overlayRemaining <= 0) {
-                    overlayFiveMinuteButton.setEnabled(true);
-                    overlayFiveMinuteButton.setText("允许 5 分钟");
-                    overlayTenMinuteButton.setEnabled(true);
-                    overlayTenMinuteButton.setText("允许 10 分钟");
-                    overlayBreathView.setText("现在再决定一次：你真的要打开它吗？");
                     DiagnosticLogger.log(BusterAccessibilityService.this, "challenge", "overlay countdown complete package=" + overlayTargetPackage);
+                    beginOverlayInteractions();
                     return;
                 }
                 overlayRemaining--;
@@ -238,6 +274,10 @@ public class BusterAccessibilityService extends AccessibilityService {
 
     private void updateOverlayCountdown() {
         overlayTimerView.setText(String.valueOf(overlayRemaining));
+        if (overlayRule != null && overlayRule.waitSeconds <= 0) {
+            overlayBreathView.setText("这次不等待，直接进入规则确认。");
+            return;
+        }
         int phase = overlayRemaining % 6;
         if (phase >= 4) {
             overlayBreathView.setText("慢慢吸气");
@@ -248,8 +288,153 @@ public class BusterAccessibilityService extends AccessibilityService {
         }
     }
 
+    private void beginOverlayInteractions() {
+        if (overlayRule == null) {
+            overlayRule = AppRule.defaults();
+        }
+        overlayTimerView.setText("0");
+        if (overlayRule.requiredTaps > 0) {
+            overlayBreathView.setText("再追着按钮点 " + overlayRule.requiredTaps + " 次，确认这不是自动冲动。");
+            overlayActionArea.setVisibility(View.VISIBLE);
+            updateOverlayActionButton();
+            moveOverlayActionButton();
+            return;
+        }
+        beginOverlayConfirmOrComplete();
+    }
+
+    private void handleOverlayActionClick() {
+        if (overlayRule == null || overlayRule.requiredTaps <= 0 || overlayActionButton == null) {
+            return;
+        }
+        overlayTapCount++;
+        DiagnosticLogger.log(this, "challenge", "overlay action tap package=" + overlayTargetPackage
+                + " taps=" + overlayTapCount + "/" + overlayRule.requiredTaps);
+        if (overlayTapCount >= overlayRule.requiredTaps) {
+            overlayActionArea.setVisibility(View.GONE);
+            beginOverlayConfirmOrComplete();
+            return;
+        }
+
+        updateOverlayActionButton();
+        if (shouldHideOverlayActionButton()) {
+            hideOverlayActionButton();
+        } else {
+            moveOverlayActionButton();
+        }
+    }
+
+    private boolean shouldHideOverlayActionButton() {
+        int hiddenRemaining = overlayRule.hiddenCount - overlayHideCount;
+        if (hiddenRemaining <= 0) {
+            return false;
+        }
+        int tapsRemaining = overlayRule.requiredTaps - overlayTapCount;
+        return hiddenRemaining >= tapsRemaining || random.nextBoolean();
+    }
+
+    private void hideOverlayActionButton() {
+        overlayHideCount++;
+        overlayActionButton.setVisibility(View.INVISIBLE);
+        overlayBreathView.setText("按钮先藏一下，别急着点。");
+        if (overlayUnhide != null) {
+            handler.removeCallbacks(overlayUnhide);
+        }
+        long delayMillis = Math.max(1, overlayRule.hiddenSeconds) * 1000L;
+        overlayUnhide = () -> {
+            if (challengeOverlay == null || overlayActionButton == null) {
+                return;
+            }
+            overlayActionButton.setVisibility(View.VISIBLE);
+            updateOverlayActionButton();
+            moveOverlayActionButton();
+        };
+        handler.postDelayed(overlayUnhide, delayMillis);
+        DiagnosticLogger.log(this, "challenge", "overlay action hidden package=" + overlayTargetPackage
+                + " hidden=" + overlayHideCount + "/" + overlayRule.hiddenCount
+                + " delayMillis=" + delayMillis);
+    }
+
+    private void updateOverlayActionButton() {
+        int remainingTaps = Math.max(0, overlayRule.requiredTaps - overlayTapCount);
+        overlayActionButton.setText("点我，还差 " + remainingTaps + " 次");
+        overlayBreathView.setText("按钮会移动，点的时候慢一点。");
+    }
+
+    private void moveOverlayActionButton() {
+        if (overlayActionArea == null || overlayActionButton == null) {
+            return;
+        }
+        overlayActionArea.post(() -> {
+            if (challengeOverlay == null || overlayActionArea == null || overlayActionButton == null) {
+                return;
+            }
+            int buttonWidth = Math.max(dp(120), overlayActionButton.getMeasuredWidth());
+            int buttonHeight = Math.max(dp(48), overlayActionButton.getMeasuredHeight());
+            int maxLeft = Math.max(0, overlayActionArea.getWidth() - buttonWidth);
+            int maxTop = Math.max(0, overlayActionArea.getHeight() - buttonHeight);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            params.leftMargin = maxLeft == 0 ? 0 : random.nextInt(maxLeft + 1);
+            params.topMargin = maxTop == 0 ? 0 : random.nextInt(maxTop + 1);
+            overlayActionButton.setLayoutParams(params);
+        });
+    }
+
+    private void beginOverlayConfirmOrComplete() {
+        if (overlayRule.confirmText.isEmpty()) {
+            completeOverlayChallenge();
+            return;
+        }
+        overlayBreathView.setText("输入确认文字，给自己一个清醒的停顿。");
+        overlayConfirmInput.setHint("请输入：" + overlayRule.confirmText);
+        overlayConfirmInput.setVisibility(View.VISIBLE);
+        overlayConfirmButton.setVisibility(View.VISIBLE);
+    }
+
+    private void validateOverlayConfirm() {
+        if (overlayRule == null || overlayConfirmInput == null) {
+            return;
+        }
+        String actual = overlayConfirmInput.getText().toString().trim();
+        if (overlayRule.confirmText.equals(actual)) {
+            DiagnosticLogger.log(this, "challenge", "overlay confirm matched package=" + overlayTargetPackage);
+            overlayConfirmInput.setVisibility(View.GONE);
+            overlayConfirmButton.setVisibility(View.GONE);
+            completeOverlayChallenge();
+        } else {
+            overlayConfirmInput.setError("请完整输入确认文字");
+            DiagnosticLogger.log(this, "challenge", "overlay confirm mismatch package=" + overlayTargetPackage);
+        }
+    }
+
+    private void completeOverlayChallenge() {
+        int sessionLimit = overlayRule == null ? AppRule.DEFAULT_SESSION_LIMIT_MINUTES : Math.max(1, overlayRule.sessionLimitMinutes);
+        int firstMinutes = Math.min(5, sessionLimit);
+        overlayFiveMinuteButton.setEnabled(true);
+        overlayFiveMinuteButton.setText("允许 " + firstMinutes + " 分钟");
+        overlayFiveMinuteButton.setOnClickListener(v -> continueFromOverlay(firstMinutes));
+
+        if (sessionLimit > firstMinutes) {
+            overlayTenMinuteButton.setVisibility(View.VISIBLE);
+            overlayTenMinuteButton.setEnabled(true);
+            overlayTenMinuteButton.setText("允许 " + sessionLimit + " 分钟");
+            overlayTenMinuteButton.setOnClickListener(v -> continueFromOverlay(sessionLimit));
+        } else {
+            overlayTenMinuteButton.setVisibility(View.GONE);
+        }
+        overlayBreathView.setText("现在再决定一次：你真的要打开它吗？");
+        DiagnosticLogger.log(this, "challenge", "overlay challenge complete package=" + overlayTargetPackage
+                + " sessionLimitMinutes=" + sessionLimit);
+    }
+
     private void continueFromOverlay(int minutes) {
         String packageName = overlayTargetPackage;
+        if (overlayRule != null) {
+            minutes = Math.min(minutes, Math.max(1, overlayRule.sessionLimitMinutes));
+        }
         DiagnosticLogger.log(this, "challenge", "overlay continue package=" + packageName + " minutes=" + minutes);
         RuleStore.grantPassthrough(this, packageName, minutes);
         schedulePassthroughExpiryCheck(packageName);
@@ -280,6 +465,10 @@ public class BusterAccessibilityService extends AccessibilityService {
             handler.removeCallbacks(overlayTick);
             overlayTick = null;
         }
+        if (overlayUnhide != null) {
+            handler.removeCallbacks(overlayUnhide);
+            overlayUnhide = null;
+        }
         if (challengeOverlay != null && windowManager != null) {
             try {
                 windowManager.removeView(challengeOverlay);
@@ -293,8 +482,15 @@ public class BusterAccessibilityService extends AccessibilityService {
         overlayBreathView = null;
         overlayFiveMinuteButton = null;
         overlayTenMinuteButton = null;
+        overlayActionArea = null;
+        overlayActionButton = null;
+        overlayConfirmInput = null;
+        overlayConfirmButton = null;
+        overlayRule = null;
         overlayTargetPackage = null;
         overlayRemaining = 0;
+        overlayTapCount = 0;
+        overlayHideCount = 0;
         if (clearChallenge) {
             RuleStore.clearChallengePackage(this);
         }
@@ -317,14 +513,7 @@ public class BusterAccessibilityService extends AccessibilityService {
     }
 
     private String loadLabel(String packageName) {
-        PackageManager packageManager = getPackageManager();
-        try {
-            return packageManager.getApplicationLabel(
-                    packageManager.getApplicationInfo(packageName, 0)
-            ).toString();
-        } catch (PackageManager.NameNotFoundException ignored) {
-            return packageName;
-        }
+        return AppCatalog.loadLabel(this, packageName);
     }
 
     private void schedulePassthroughExpiryCheck(String packageName) {
