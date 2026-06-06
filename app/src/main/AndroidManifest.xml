@@ -32,6 +32,18 @@
             android:exported="false" />
 
         <activity
+            android:name=".AppSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AddAppActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ActiveAppsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
