@@ -49,7 +49,6 @@ public class MainActivity extends Activity {
         root.addView(activeAppsButton, matchWrap());
 
         Button addAppsButton = homeButton("增加应用", "搜索并选择需要拦截的应用");
-        addAppsButton.setTextSize(21);
         addAppsButton.setOnClickListener(v -> startActivity(new Intent(this, AddAppActivity.class)));
         LinearLayout.LayoutParams addParams = matchWrap();
         addParams.setMargins(0, dp(14), 0, dp(14));

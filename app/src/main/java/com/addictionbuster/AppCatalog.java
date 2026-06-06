@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 
 import java.text.Collator;
@@ -56,6 +57,15 @@ final class AppCatalog {
             ).toString();
         } catch (PackageManager.NameNotFoundException ignored) {
             return packageName;
+        }
+    }
+
+    static Drawable loadIcon(Context context, String packageName) {
+        PackageManager packageManager = context.getPackageManager();
+        try {
+            return packageManager.getApplicationIcon(packageName);
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return packageManager.getDefaultActivityIcon();
         }
     }
 }

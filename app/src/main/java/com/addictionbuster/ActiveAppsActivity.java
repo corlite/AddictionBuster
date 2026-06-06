@@ -1,11 +1,12 @@
 package com.addictionbuster;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -32,8 +33,13 @@ public class ActiveAppsActivity extends Activity {
         root.addView(title, matchWrap());
 
         TextView subtitle = text("这里显示已经启用拦截的所有应用。点进去可以查看和修改规则。", 15, Color.rgb(71, 85, 105), false);
-        subtitle.setPadding(0, dp(8), 0, dp(14));
+        subtitle.setPadding(0, dp(8), 0, dp(8));
         root.addView(subtitle, matchWrap());
+
+        TextView addLink = text("增加应用", 16, Color.rgb(37, 99, 235), true);
+        addLink.setPadding(0, 0, 0, dp(14));
+        addLink.setOnClickListener(v -> startActivity(new Intent(this, AddAppActivity.class)));
+        root.addView(addLink, matchWrap());
 
         ScrollView scrollView = new ScrollView(this);
         LinearLayout list = new LinearLayout(this);
@@ -63,15 +69,33 @@ public class ActiveAppsActivity extends Activity {
         packages.sort(String::compareToIgnoreCase);
         for (String packageName : packages) {
             String label = AppCatalog.loadLabel(this, packageName);
-            Button row = new Button(this);
-            row.setAllCaps(false);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setText(label + "\n" + packageName);
-            row.setTextSize(15);
-            row.setTextColor(Color.rgb(15, 23, 42));
+            LinearLayout row = appRow(packageName, label);
             row.setOnClickListener(v -> startActivity(AppRuleActivity.intentFor(this, packageName, label)));
             list.addView(row, matchWrap());
         }
+    }
+
+    private LinearLayout appRow(String packageName, String label) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(10), 0, dp(10));
+        row.setClickable(true);
+        row.setFocusable(true);
+
+        ImageView icon = new ImageView(this);
+        icon.setImageDrawable(AppCatalog.loadIcon(this, packageName));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(44), dp(44));
+        iconParams.setMargins(0, 0, dp(12), 0);
+        row.addView(icon, iconParams);
+
+        TextView labelView = text(label, 16, Color.rgb(15, 23, 42), true);
+        row.addView(labelView, new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+        ));
+        return row;
     }
 
     private TextView text(String value, int sp, int color, boolean bold) {

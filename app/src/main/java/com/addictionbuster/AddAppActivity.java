@@ -8,6 +8,7 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -116,14 +117,17 @@ public class AddAppActivity extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, dp(10), 0, dp(10));
 
+        ImageView icon = new ImageView(this);
+        icon.setImageDrawable(AppCatalog.loadIcon(this, app.packageName));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(44), dp(44));
+        iconParams.setMargins(0, 0, dp(12), 0);
+        row.addView(icon, iconParams);
+
         LinearLayout textBox = new LinearLayout(this);
         textBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView label = text(app.label, 16, Color.rgb(15, 23, 42), true);
         textBox.addView(label, matchWrap());
-
-        TextView packageView = text(app.packageName, 12, Color.rgb(100, 116, 139), false);
-        textBox.addView(packageView, matchWrap());
 
         row.addView(textBox, new LinearLayout.LayoutParams(
                 0,
