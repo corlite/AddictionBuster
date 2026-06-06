@@ -21,7 +21,8 @@ public class ChallengeActivity extends Activity {
     private int remaining = CHALLENGE_SECONDS;
     private TextView timerView;
     private TextView breathView;
-    private Button continueButton;
+    private Button fiveMinuteButton;
+    private Button tenMinuteButton;
     private boolean completed;
     private boolean continuedToTarget;
 
@@ -31,8 +32,10 @@ public class ChallengeActivity extends Activity {
             updateCountdown();
             if (remaining <= 0) {
                 completed = true;
-                continueButton.setEnabled(true);
-                continueButton.setText("继续打开");
+                fiveMinuteButton.setEnabled(true);
+                fiveMinuteButton.setText("允许 5 分钟");
+                tenMinuteButton.setEnabled(true);
+                tenMinuteButton.setText("允许 10 分钟");
                 breathView.setText("现在再决定一次：你真的要打开它吗？");
                 DiagnosticLogger.log(ChallengeActivity.this, "challenge", "countdown complete targetPackage=" + targetPackage);
                 return;
@@ -99,12 +102,19 @@ public class ChallengeActivity extends Activity {
         breathView.setPadding(0, 0, 0, dp(28));
         root.addView(breathView, matchWrap());
 
-        continueButton = new Button(this);
-        continueButton.setText("请先完成呼吸");
-        continueButton.setAllCaps(false);
-        continueButton.setEnabled(false);
-        continueButton.setOnClickListener(v -> continueToTarget());
-        root.addView(continueButton, matchWrap());
+        fiveMinuteButton = new Button(this);
+        fiveMinuteButton.setText("请先完成呼吸");
+        fiveMinuteButton.setAllCaps(false);
+        fiveMinuteButton.setEnabled(false);
+        fiveMinuteButton.setOnClickListener(v -> continueToTarget(5));
+        root.addView(fiveMinuteButton, matchWrap());
+
+        tenMinuteButton = new Button(this);
+        tenMinuteButton.setText("请先完成呼吸");
+        tenMinuteButton.setAllCaps(false);
+        tenMinuteButton.setEnabled(false);
+        tenMinuteButton.setOnClickListener(v -> continueToTarget(10));
+        root.addView(tenMinuteButton, matchWrap());
 
         Button quitButton = new Button(this);
         quitButton.setText("算了，回到桌面");
@@ -112,7 +122,7 @@ public class ChallengeActivity extends Activity {
         quitButton.setOnClickListener(v -> goHome());
         root.addView(quitButton, matchWrap());
 
-        TextView hint = text("完成后只放行这一次。离开目标应用后，下次打开会再次拦截。", 14, Color.rgb(100, 116, 139), false);
+        TextView hint = text("完成后可选择本次使用 5 分钟或 10 分钟。时间到期后，再打开会重新拦截。", 14, Color.rgb(100, 116, 139), false);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(22), 0, 0);
         root.addView(hint, matchWrap());
@@ -132,17 +142,17 @@ public class ChallengeActivity extends Activity {
         }
     }
 
-    private void continueToTarget() {
+    private void continueToTarget(int minutes) {
         completed = true;
         continuedToTarget = true;
-        RuleStore.grantPassthrough(this, targetPackage);
+        RuleStore.grantPassthrough(this, targetPackage, minutes);
 
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(targetPackage);
         if (launchIntent != null) {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             try {
-                DiagnosticLogger.log(this, "challenge", "continue to target package=" + targetPackage);
+                DiagnosticLogger.log(this, "challenge", "continue to target package=" + targetPackage + " minutes=" + minutes);
                 startActivity(launchIntent);
             } catch (RuntimeException exception) {
                 DiagnosticLogger.log(this, "challenge", "failed to continue target package=" + targetPackage + " error=" + exception);

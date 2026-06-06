@@ -30,7 +30,8 @@ public class BusterAccessibilityService extends AccessibilityService {
     private View challengeOverlay;
     private TextView overlayTimerView;
     private TextView overlayBreathView;
-    private Button overlayContinueButton;
+    private Button overlayFiveMinuteButton;
+    private Button overlayTenMinuteButton;
     private Runnable overlayTick;
     private String overlayTargetPackage;
     private int overlayRemaining;
@@ -61,6 +62,9 @@ public class BusterAccessibilityService extends AccessibilityService {
         String activeChallenge = RuleStore.getChallengePackage(this);
         boolean blocked = blockedPackages.contains(packageName);
         boolean passthrough = packageName.equals(passthroughPackage);
+        long passthroughRemainingSeconds = passthrough
+                ? RuleStore.getPassthroughRemainingSeconds(this, packageName)
+                : 0L;
 
         DiagnosticLogger.log(
                 this,
@@ -70,6 +74,7 @@ public class BusterAccessibilityService extends AccessibilityService {
                         + " class=" + className
                         + " blocked=" + blocked
                         + " passthrough=" + passthrough
+                        + " passthroughRemainingSeconds=" + passthroughRemainingSeconds
                         + " activeChallenge=" + activeChallenge
         );
 
@@ -78,14 +83,14 @@ public class BusterAccessibilityService extends AccessibilityService {
             return;
         }
 
-        RuleStore.clearPassthroughIfDifferent(this, packageName);
+        RuleStore.clearExpiredPassthrough(this);
 
         if (!blocked) {
             DiagnosticLogger.log(this, "service", "allow because package is not blocked: " + packageName);
             return;
         }
         if (passthrough) {
-            DiagnosticLogger.log(this, "service", "allow because passthrough is active: " + packageName);
+            DiagnosticLogger.log(this, "service", "allow because passthrough is active: " + packageName + " remainingSeconds=" + passthroughRemainingSeconds);
             return;
         }
 
@@ -152,12 +157,19 @@ public class BusterAccessibilityService extends AccessibilityService {
         overlayBreathView.setPadding(0, 0, 0, dp(28));
         root.addView(overlayBreathView, matchWrap());
 
-        overlayContinueButton = new Button(this);
-        overlayContinueButton.setText("请先完成呼吸");
-        overlayContinueButton.setAllCaps(false);
-        overlayContinueButton.setEnabled(false);
-        overlayContinueButton.setOnClickListener(v -> continueFromOverlay());
-        root.addView(overlayContinueButton, matchWrap());
+        overlayFiveMinuteButton = new Button(this);
+        overlayFiveMinuteButton.setText("请先完成呼吸");
+        overlayFiveMinuteButton.setAllCaps(false);
+        overlayFiveMinuteButton.setEnabled(false);
+        overlayFiveMinuteButton.setOnClickListener(v -> continueFromOverlay(5));
+        root.addView(overlayFiveMinuteButton, matchWrap());
+
+        overlayTenMinuteButton = new Button(this);
+        overlayTenMinuteButton.setText("请先完成呼吸");
+        overlayTenMinuteButton.setAllCaps(false);
+        overlayTenMinuteButton.setEnabled(false);
+        overlayTenMinuteButton.setOnClickListener(v -> continueFromOverlay(10));
+        root.addView(overlayTenMinuteButton, matchWrap());
 
         Button quitButton = new Button(this);
         quitButton.setText("算了，回到桌面");
@@ -165,7 +177,7 @@ public class BusterAccessibilityService extends AccessibilityService {
         quitButton.setOnClickListener(v -> goHomeFromOverlay());
         root.addView(quitButton, matchWrap());
 
-        TextView hint = text("完成后只放行这一次。离开目标应用后，下次打开会再次拦截。", 14, Color.rgb(100, 116, 139), false);
+        TextView hint = text("完成后可选择本次使用 5 分钟或 10 分钟。时间到期后，再打开会重新拦截。", 14, Color.rgb(100, 116, 139), false);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(22), 0, 0);
         root.addView(hint, matchWrap());
@@ -200,8 +212,10 @@ public class BusterAccessibilityService extends AccessibilityService {
             public void run() {
                 updateOverlayCountdown();
                 if (overlayRemaining <= 0) {
-                    overlayContinueButton.setEnabled(true);
-                    overlayContinueButton.setText("继续打开");
+                    overlayFiveMinuteButton.setEnabled(true);
+                    overlayFiveMinuteButton.setText("允许 5 分钟");
+                    overlayTenMinuteButton.setEnabled(true);
+                    overlayTenMinuteButton.setText("允许 10 分钟");
                     overlayBreathView.setText("现在再决定一次：你真的要打开它吗？");
                     DiagnosticLogger.log(BusterAccessibilityService.this, "challenge", "overlay countdown complete package=" + overlayTargetPackage);
                     return;
@@ -225,10 +239,10 @@ public class BusterAccessibilityService extends AccessibilityService {
         }
     }
 
-    private void continueFromOverlay() {
+    private void continueFromOverlay(int minutes) {
         String packageName = overlayTargetPackage;
-        DiagnosticLogger.log(this, "challenge", "overlay continue package=" + packageName);
-        RuleStore.grantPassthrough(this, packageName);
+        DiagnosticLogger.log(this, "challenge", "overlay continue package=" + packageName + " minutes=" + minutes);
+        RuleStore.grantPassthrough(this, packageName, minutes);
         removeChallengeOverlay("continue", false);
 
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
@@ -267,7 +281,8 @@ public class BusterAccessibilityService extends AccessibilityService {
         challengeOverlay = null;
         overlayTimerView = null;
         overlayBreathView = null;
-        overlayContinueButton = null;
+        overlayFiveMinuteButton = null;
+        overlayTenMinuteButton = null;
         overlayTargetPackage = null;
         overlayRemaining = 0;
         if (clearChallenge) {

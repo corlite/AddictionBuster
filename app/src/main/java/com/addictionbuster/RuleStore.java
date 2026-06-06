@@ -11,7 +11,9 @@ final class RuleStore {
     private static final String PREFS_NAME = "addiction_buster_rules";
     private static final String KEY_BLOCKED_PACKAGES = "blocked_packages";
     private static final String KEY_PASSTHROUGH_PACKAGE = "passthrough_package";
+    private static final String KEY_PASSTHROUGH_UNTIL_MILLIS = "passthrough_until_millis";
     private static final String KEY_CHALLENGE_PACKAGE = "challenge_package";
+    private static final long MINUTE_MILLIS = 60_000L;
 
     private RuleStore() {
     }
@@ -33,34 +35,67 @@ final class RuleStore {
         return getBlockedPackages(context).contains(packageName);
     }
 
-    static void grantPassthrough(Context context, String packageName) {
+    static void grantPassthrough(Context context, String packageName, int minutes) {
+        long untilMillis = System.currentTimeMillis() + minutes * MINUTE_MILLIS;
         prefs(context)
                 .edit()
                 .putString(KEY_PASSTHROUGH_PACKAGE, packageName)
+                .putLong(KEY_PASSTHROUGH_UNTIL_MILLIS, untilMillis)
                 .remove(KEY_CHALLENGE_PACKAGE)
                 .apply();
-        DiagnosticLogger.log(context, "rule", "grant passthrough package=" + packageName);
+        DiagnosticLogger.log(context, "rule", "grant passthrough package=" + packageName + " minutes=" + minutes + " untilMillis=" + untilMillis);
     }
 
     static boolean hasPassthrough(Context context, String packageName) {
-        return packageName.equals(prefs(context).getString(KEY_PASSTHROUGH_PACKAGE, null));
+        SharedPreferences preferences = prefs(context);
+        String allowed = preferences.getString(KEY_PASSTHROUGH_PACKAGE, null);
+        if (!packageName.equals(allowed)) {
+            return false;
+        }
+
+        long untilMillis = preferences.getLong(KEY_PASSTHROUGH_UNTIL_MILLIS, 0L);
+        if (untilMillis <= System.currentTimeMillis()) {
+            DiagnosticLogger.log(context, "rule", "passthrough expired package=" + packageName + " untilMillis=" + untilMillis);
+            clearPassthrough(context);
+            return false;
+        }
+        return true;
     }
 
     static void clearPassthrough(Context context) {
-        prefs(context).edit().remove(KEY_PASSTHROUGH_PACKAGE).apply();
+        prefs(context)
+                .edit()
+                .remove(KEY_PASSTHROUGH_PACKAGE)
+                .remove(KEY_PASSTHROUGH_UNTIL_MILLIS)
+                .apply();
         DiagnosticLogger.log(context, "rule", "clear passthrough");
     }
 
-    static void clearPassthroughIfDifferent(Context context, String packageName) {
+    static void clearExpiredPassthrough(Context context) {
         String allowed = prefs(context).getString(KEY_PASSTHROUGH_PACKAGE, null);
-        if (allowed != null && !allowed.equals(packageName)) {
-            DiagnosticLogger.log(context, "rule", "clear passthrough because foreground=" + packageName + " allowed=" + allowed);
-            clearPassthrough(context);
+        if (allowed != null) {
+            hasPassthrough(context, allowed);
         }
     }
 
     static String getPassthroughPackage(Context context) {
-        return prefs(context).getString(KEY_PASSTHROUGH_PACKAGE, null);
+        SharedPreferences preferences = prefs(context);
+        String allowed = preferences.getString(KEY_PASSTHROUGH_PACKAGE, null);
+        if (allowed == null) {
+            return null;
+        }
+        if (!hasPassthrough(context, allowed)) {
+            return null;
+        }
+        return allowed;
+    }
+
+    static long getPassthroughRemainingSeconds(Context context, String packageName) {
+        if (!hasPassthrough(context, packageName)) {
+            return 0L;
+        }
+        long untilMillis = prefs(context).getLong(KEY_PASSTHROUGH_UNTIL_MILLIS, 0L);
+        return Math.max(0L, (untilMillis - System.currentTimeMillis()) / 1000L);
     }
 
     static String getChallengePackage(Context context) {
