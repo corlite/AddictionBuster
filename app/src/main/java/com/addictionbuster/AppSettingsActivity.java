@@ -62,7 +62,7 @@ public class AppSettingsActivity extends Activity {
         root.addView(notificationAccessButton, matchWrap());
 
         Button diagnosticButton = new Button(this);
-        diagnosticButton.setText("查看诊断日志");
+        diagnosticButton.setText("诊断中心");
         diagnosticButton.setAllCaps(false);
         diagnosticButton.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticActivity.class)));
         root.addView(diagnosticButton, matchWrap());
