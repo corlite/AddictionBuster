@@ -1,7 +1,9 @@
 package com.addictionbuster;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ResolveInfo;
 
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -97,6 +99,7 @@ final class RuleStore {
             return true;
         }
         return defaultPhoneWhitelistPackages().contains(packageName)
+                || isHomePackage(context, packageName)
                 || getPhoneWhitelistPackages(context).contains(packageName);
     }
 
@@ -358,13 +361,18 @@ final class RuleStore {
         packages.add("com.google.android.apps.messaging");
         packages.add("com.google.android.inputmethod.latin");
         packages.add("com.android.inputmethod.latin");
-        packages.add("com.miui.home");
-        packages.add("com.huawei.android.launcher");
-        packages.add("com.oppo.launcher");
-        packages.add("com.vivo.launcher");
-        packages.add("com.android.launcher");
-        packages.add("com.android.launcher3");
         return packages;
+    }
+
+    private static boolean isHomePackage(Context context, String packageName) {
+        Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+        homeIntent.addCategory(Intent.CATEGORY_HOME);
+        for (ResolveInfo info : context.getPackageManager().queryIntentActivities(homeIntent, 0)) {
+            if (info.activityInfo != null && packageName.equals(info.activityInfo.packageName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String todayKey() {
