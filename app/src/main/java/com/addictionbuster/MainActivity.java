@@ -72,7 +72,7 @@ public class MainActivity extends Activity {
         Button notificationAccessButton = new Button(this);
         notificationAccessButton.setText("开启后台媒体阻断");
         notificationAccessButton.setAllCaps(false);
-        notificationAccessButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        notificationAccessButton.setOnClickListener(v -> startActivity(new Intent(this, NotificationAccessGuideActivity.class)));
         root.addView(notificationAccessButton, matchWrap());
 
         Button diagnosticButton = new Button(this);
