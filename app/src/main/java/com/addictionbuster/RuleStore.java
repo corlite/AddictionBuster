@@ -3,8 +3,11 @@ package com.addictionbuster;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 final class RuleStore {
@@ -21,6 +24,9 @@ final class RuleStore {
     private static final String FIELD_HIDDEN_COUNT = ".hidden_count";
     private static final String FIELD_HIDDEN_SECONDS = ".hidden_seconds";
     private static final String FIELD_CONFIRM_TEXT = ".confirm_text";
+    private static final String USAGE_PREFIX = "usage.";
+    private static final String FIELD_USAGE_DATE = ".date";
+    private static final String FIELD_USAGE_SECONDS = ".seconds";
     private static final long MINUTE_MILLIS = 60_000L;
 
     private RuleStore() {
@@ -90,6 +96,52 @@ final class RuleStore {
                 .remove(ruleKey(packageName, FIELD_CONFIRM_TEXT))
                 .apply();
         DiagnosticLogger.log(context, "rule", "cleared app rule package=" + packageName);
+    }
+
+    static long getDailyUsedSeconds(Context context, String packageName) {
+        SharedPreferences preferences = prefs(context);
+        String today = todayKey();
+        String storedDate = preferences.getString(usageKey(packageName, FIELD_USAGE_DATE), "");
+        if (!today.equals(storedDate)) {
+            preferences
+                    .edit()
+                    .putString(usageKey(packageName, FIELD_USAGE_DATE), today)
+                    .putLong(usageKey(packageName, FIELD_USAGE_SECONDS), 0L)
+                    .apply();
+            return 0L;
+        }
+        return Math.max(0L, preferences.getLong(usageKey(packageName, FIELD_USAGE_SECONDS), 0L));
+    }
+
+    static long getDailyRemainingSeconds(Context context, String packageName, AppRule rule) {
+        if (rule.dailyQuotaMinutes <= 0) {
+            return Long.MAX_VALUE;
+        }
+        long quotaSeconds = rule.dailyQuotaMinutes * 60L;
+        return Math.max(0L, quotaSeconds - getDailyUsedSeconds(context, packageName));
+    }
+
+    static void addDailyUsageMillis(Context context, String packageName, long millis, String reason) {
+        if (millis <= 0L) {
+            return;
+        }
+        SharedPreferences preferences = prefs(context);
+        String today = todayKey();
+        String storedDate = preferences.getString(usageKey(packageName, FIELD_USAGE_DATE), "");
+        long currentSeconds = today.equals(storedDate)
+                ? Math.max(0L, preferences.getLong(usageKey(packageName, FIELD_USAGE_SECONDS), 0L))
+                : 0L;
+        long addSeconds = Math.max(1L, millis / 1000L);
+        long nextSeconds = currentSeconds + addSeconds;
+        preferences
+                .edit()
+                .putString(usageKey(packageName, FIELD_USAGE_DATE), today)
+                .putLong(usageKey(packageName, FIELD_USAGE_SECONDS), nextSeconds)
+                .apply();
+        DiagnosticLogger.log(context, "usage", "add usage package=" + packageName
+                + " addSeconds=" + addSeconds
+                + " totalSeconds=" + nextSeconds
+                + " reason=" + reason);
     }
 
     static void grantPassthrough(Context context, String packageName, int minutes) {
@@ -185,7 +237,15 @@ final class RuleStore {
         return RULE_PREFIX + packageName + field;
     }
 
+    private static String usageKey(String packageName, String field) {
+        return USAGE_PREFIX + packageName + field;
+    }
+
     private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static String todayKey() {
+        return new SimpleDateFormat("yyyyMMdd", Locale.CHINA).format(new Date());
     }
 }

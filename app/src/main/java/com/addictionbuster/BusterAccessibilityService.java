@@ -46,6 +46,8 @@ public class BusterAccessibilityService extends AccessibilityService {
     private int overlayRemaining;
     private int overlayTapCount;
     private int overlayHideCount;
+    private String currentForegroundPackage;
+    private long foregroundStartedAtMillis;
 
     @Override
     protected void onServiceConnected() {
@@ -69,6 +71,7 @@ public class BusterAccessibilityService extends AccessibilityService {
 
         String packageName = packageValue.toString();
         String className = event.getClassName() == null ? "" : event.getClassName().toString();
+        trackForegroundPackage(packageName);
         Set<String> blockedPackages = RuleStore.getBlockedPackages(this);
         String passthroughPackage = RuleStore.getPassthroughPackage(this);
         String activeChallenge = RuleStore.getChallengePackage(this);
@@ -122,6 +125,36 @@ public class BusterAccessibilityService extends AccessibilityService {
         showChallengeOverlay(packageName, loadLabel(packageName));
     }
 
+    private void trackForegroundPackage(String packageName) {
+        long now = System.currentTimeMillis();
+        if (currentForegroundPackage != null && !currentForegroundPackage.equals(packageName)) {
+            addCurrentForegroundUsage("foreground changed to " + packageName, false);
+        }
+        if (!packageName.equals(currentForegroundPackage)) {
+            currentForegroundPackage = packageName;
+            foregroundStartedAtMillis = now;
+        } else if (foregroundStartedAtMillis <= 0L) {
+            foregroundStartedAtMillis = now;
+        }
+    }
+
+    private void addCurrentForegroundUsage(String reason, boolean force) {
+        if (currentForegroundPackage == null || foregroundStartedAtMillis <= 0L) {
+            return;
+        }
+        if (!RuleStore.isBlocked(this, currentForegroundPackage)) {
+            foregroundStartedAtMillis = System.currentTimeMillis();
+            return;
+        }
+        if (!force && !RuleStore.hasPassthrough(this, currentForegroundPackage)) {
+            foregroundStartedAtMillis = System.currentTimeMillis();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        RuleStore.addDailyUsageMillis(this, currentForegroundPackage, now - foregroundStartedAtMillis, reason);
+        foregroundStartedAtMillis = now;
+    }
+
     @Override
     public void onInterrupt() {
         DiagnosticLogger.log(this, "service", "accessibility service interrupted");
@@ -129,6 +162,7 @@ public class BusterAccessibilityService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
+        addCurrentForegroundUsage("service destroyed", false);
         if (passthroughExpiryCheck != null) {
             handler.removeCallbacks(passthroughExpiryCheck);
             passthroughExpiryCheck = null;
@@ -412,16 +446,32 @@ public class BusterAccessibilityService extends AccessibilityService {
 
     private void completeOverlayChallenge() {
         int sessionLimit = overlayRule == null ? AppRule.DEFAULT_SESSION_LIMIT_MINUTES : Math.max(1, overlayRule.sessionLimitMinutes);
+        long dailyRemainingSeconds = overlayRule == null
+                ? Long.MAX_VALUE
+                : RuleStore.getDailyRemainingSeconds(this, overlayTargetPackage, overlayRule);
+        if (dailyRemainingSeconds <= 0L) {
+            overlayFiveMinuteButton.setEnabled(false);
+            overlayFiveMinuteButton.setText("今日额度已用完");
+            overlayTenMinuteButton.setVisibility(View.GONE);
+            overlayBreathView.setText("今天给这个应用的额度已经用完了，先回到桌面。");
+            DiagnosticLogger.log(this, "challenge", "overlay quota exhausted package=" + overlayTargetPackage);
+            return;
+        }
+        if (dailyRemainingSeconds != Long.MAX_VALUE) {
+            int remainingMinutes = Math.max(1, (int) Math.ceil(dailyRemainingSeconds / 60.0));
+            sessionLimit = Math.min(sessionLimit, remainingMinutes);
+        }
         int firstMinutes = Math.min(5, sessionLimit);
+        int secondMinutes = sessionLimit;
         overlayFiveMinuteButton.setEnabled(true);
         overlayFiveMinuteButton.setText("允许 " + firstMinutes + " 分钟");
         overlayFiveMinuteButton.setOnClickListener(v -> continueFromOverlay(firstMinutes));
 
-        if (sessionLimit > firstMinutes) {
+        if (secondMinutes > firstMinutes) {
             overlayTenMinuteButton.setVisibility(View.VISIBLE);
             overlayTenMinuteButton.setEnabled(true);
-            overlayTenMinuteButton.setText("允许 " + sessionLimit + " 分钟");
-            overlayTenMinuteButton.setOnClickListener(v -> continueFromOverlay(sessionLimit));
+            overlayTenMinuteButton.setText("允许 " + secondMinutes + " 分钟");
+            overlayTenMinuteButton.setOnClickListener(v -> continueFromOverlay(secondMinutes));
         } else {
             overlayTenMinuteButton.setVisibility(View.GONE);
         }
@@ -434,9 +484,19 @@ public class BusterAccessibilityService extends AccessibilityService {
         String packageName = overlayTargetPackage;
         if (overlayRule != null) {
             minutes = Math.min(minutes, Math.max(1, overlayRule.sessionLimitMinutes));
+            long dailyRemainingSeconds = RuleStore.getDailyRemainingSeconds(this, packageName, overlayRule);
+            if (dailyRemainingSeconds <= 0L) {
+                DiagnosticLogger.log(this, "challenge", "deny continue because quota exhausted package=" + packageName);
+                return;
+            }
+            if (dailyRemainingSeconds != Long.MAX_VALUE) {
+                minutes = Math.min(minutes, Math.max(1, (int) Math.ceil(dailyRemainingSeconds / 60.0)));
+            }
         }
         DiagnosticLogger.log(this, "challenge", "overlay continue package=" + packageName + " minutes=" + minutes);
         RuleStore.grantPassthrough(this, packageName, minutes);
+        currentForegroundPackage = packageName;
+        foregroundStartedAtMillis = System.currentTimeMillis();
         schedulePassthroughExpiryCheck(packageName);
         removeChallengeOverlay("continue", false);
 
@@ -528,8 +588,15 @@ public class BusterAccessibilityService extends AccessibilityService {
         }
         passthroughExpiryCheck = () -> {
             DiagnosticLogger.log(this, "media", "passthrough expiry check package=" + packageName);
+            if (packageName.equals(currentForegroundPackage)) {
+                addCurrentForegroundUsage("passthrough expired", true);
+            }
             RuleStore.clearExpiredPassthrough(this);
             BackgroundMediaBlocker.enforce(this, "passthrough expired package=" + packageName);
+            if (packageName.equals(currentForegroundPackage)) {
+                DiagnosticLogger.log(this, "service", "kick target home because passthrough expired package=" + packageName);
+                performGlobalAction(GLOBAL_ACTION_HOME);
+            }
         };
         handler.postDelayed(passthroughExpiryCheck, delayMillis);
         DiagnosticLogger.log(this, "media", "scheduled passthrough expiry check package=" + packageName + " delayMillis=" + delayMillis);

@@ -227,15 +227,29 @@ public class ChallengeActivity extends Activity {
     private void completeChallenge() {
         completed = true;
         int sessionLimit = Math.max(1, rule.sessionLimitMinutes);
+        long dailyRemainingSeconds = RuleStore.getDailyRemainingSeconds(this, targetPackage, rule);
+        if (dailyRemainingSeconds <= 0L) {
+            fiveMinuteButton.setEnabled(false);
+            fiveMinuteButton.setText("今日额度已用完");
+            tenMinuteButton.setVisibility(View.GONE);
+            breathView.setText("今天给这个应用的额度已经用完了，先回到桌面。");
+            DiagnosticLogger.log(this, "challenge", "activity quota exhausted targetPackage=" + targetPackage);
+            return;
+        }
+        if (dailyRemainingSeconds != Long.MAX_VALUE) {
+            int remainingMinutes = Math.max(1, (int) Math.ceil(dailyRemainingSeconds / 60.0));
+            sessionLimit = Math.min(sessionLimit, remainingMinutes);
+        }
         int firstMinutes = Math.min(5, sessionLimit);
+        int secondMinutes = sessionLimit;
         fiveMinuteButton.setEnabled(true);
         fiveMinuteButton.setText("允许 " + firstMinutes + " 分钟");
         fiveMinuteButton.setOnClickListener(v -> continueToTarget(firstMinutes));
-        if (sessionLimit > firstMinutes) {
+        if (secondMinutes > firstMinutes) {
             tenMinuteButton.setVisibility(View.VISIBLE);
             tenMinuteButton.setEnabled(true);
-            tenMinuteButton.setText("允许 " + sessionLimit + " 分钟");
-            tenMinuteButton.setOnClickListener(v -> continueToTarget(sessionLimit));
+            tenMinuteButton.setText("允许 " + secondMinutes + " 分钟");
+            tenMinuteButton.setOnClickListener(v -> continueToTarget(secondMinutes));
         } else {
             tenMinuteButton.setVisibility(View.GONE);
         }
@@ -245,6 +259,15 @@ public class ChallengeActivity extends Activity {
     private void continueToTarget(int minutes) {
         completed = true;
         continuedToTarget = true;
+        minutes = Math.min(minutes, Math.max(1, rule.sessionLimitMinutes));
+        long dailyRemainingSeconds = RuleStore.getDailyRemainingSeconds(this, targetPackage, rule);
+        if (dailyRemainingSeconds <= 0L) {
+            DiagnosticLogger.log(this, "challenge", "deny continue because quota exhausted targetPackage=" + targetPackage);
+            return;
+        }
+        if (dailyRemainingSeconds != Long.MAX_VALUE) {
+            minutes = Math.min(minutes, Math.max(1, (int) Math.ceil(dailyRemainingSeconds / 60.0)));
+        }
         RuleStore.grantPassthrough(this, targetPackage, minutes);
 
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(targetPackage);
