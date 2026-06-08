@@ -16,6 +16,14 @@ class LocalAppUsageRepository(context: Context) {
             ?: AppUsageState.empty(identityKey, dateKey)
 
     @Synchronized
+    fun listForDate(dateKey: String = today()): List<AppUsageState> =
+        readAll().values.filter { it.dateKey == dateKey }
+
+    @Synchronized
+    fun listAll(): List<AppUsageState> =
+        readAll().values.toList()
+
+    @Synchronized
     fun save(state: AppUsageState) {
         val all = readAll().toMutableMap()
         all[state.identityKey] = state

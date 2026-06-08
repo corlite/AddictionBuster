@@ -15,6 +15,10 @@ class LocalPhoneUsageRepository(context: Context) {
         readAll()[dateKey] ?: PhoneUsageState.empty(dateKey)
 
     @Synchronized
+    fun listAll(): List<PhoneUsageState> =
+        readAll().values.toList()
+
+    @Synchronized
     fun save(state: PhoneUsageState) {
         val all = readAll().toMutableMap()
         all[state.dateKey] = state
