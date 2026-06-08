@@ -44,6 +44,7 @@ class OfflineGapRecovery(
                 identityKey = gap.previousForegroundIdentityKey,
                 durationMillis = gap.durationMillis
             )
+            usageCommitWriter?.markPhoneOfflineGapPending(gap.durationMillis)
         }
         return gap
     }

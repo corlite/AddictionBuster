@@ -6,7 +6,8 @@ import com.addictionbuster.enforcement.InvalidEnforcementContextException
 import com.addictionbuster.enforcement.UsageCommit
 
 class UsageCommitWriter(
-    private val appUsageRepository: LocalAppUsageRepository
+    private val appUsageRepository: LocalAppUsageRepository,
+    private val phoneUsageRepository: LocalPhoneUsageRepository? = null
 ) {
     @Synchronized
     fun commit(previousContext: EnforcementContext, usageCommit: UsageCommit): AppUsageState {
@@ -18,6 +19,9 @@ class UsageCommitWriter(
             appUsageRepository.incrementOpen(identity, previousContext.foregroundStartedAtMillis)
         } else {
             appUsageRepository.load(identity)
+        }
+        if (usageCommit.phoneUsageMillis > 0L) {
+            phoneUsageRepository?.addUsage(usageCommit.phoneUsageMillis)
         }
         if (usageCommit.appUsageMillis == 0L) {
             return withOpenCount
@@ -31,4 +35,8 @@ class UsageCommitWriter(
     @Synchronized
     fun markOfflineGapPending(identityKey: String, durationMillis: Long): AppUsageState =
         appUsageRepository.markOfflineGapPending(identityKey, durationMillis)
+
+    @Synchronized
+    fun markPhoneOfflineGapPending(durationMillis: Long): PhoneUsageState? =
+        phoneUsageRepository?.markOfflineGapPending(durationMillis)
 }
