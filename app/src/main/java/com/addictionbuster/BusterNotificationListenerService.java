@@ -16,6 +16,10 @@ public class BusterNotificationListenerService extends NotificationListenerServi
     public void onListenerConnected() {
         super.onListenerConnected();
         DiagnosticLogger.log(this, "media", "notification listener connected");
+        if (V2RuntimeMode.isEnabled(this)) {
+            DiagnosticLogger.log(this, "media", "legacy media blocker disabled because v2 enforcement is enabled");
+            return;
+        }
         registerMediaSessionListener();
         BackgroundMediaBlocker.enforce(this, "notification listener connected");
     }
@@ -25,6 +29,10 @@ public class BusterNotificationListenerService extends NotificationListenerServi
         if (sbn == null) {
             return;
         }
+        if (V2RuntimeMode.isEnabled(this)) {
+            DiagnosticLogger.log(this, "media", "notification posted ignored by legacy media blocker because v2 enforcement is enabled");
+            return;
+        }
         DiagnosticLogger.log(this, "media", "notification posted package=" + sbn.getPackageName());
         BackgroundMediaBlocker.enforce(this, "notification posted package=" + sbn.getPackageName());
     }
@@ -32,6 +40,10 @@ public class BusterNotificationListenerService extends NotificationListenerServi
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         if (sbn == null) {
+            return;
+        }
+        if (V2RuntimeMode.isEnabled(this)) {
+            DiagnosticLogger.log(this, "media", "notification removed ignored by legacy media blocker because v2 enforcement is enabled");
             return;
         }
         DiagnosticLogger.log(this, "media", "notification removed package=" + sbn.getPackageName());

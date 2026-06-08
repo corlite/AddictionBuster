@@ -62,6 +62,10 @@ public class BusterAccessibilityService extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        if (V2RuntimeMode.isEnabled(this)) {
+            DiagnosticLogger.log(this, "service", "v2 enforcement enabled; legacy accessibility judge disabled");
+            return;
+        }
         RuleStore.clearChallengePackage(this);
         registerScreenReceiver();
         startPhoneUsageTick();
@@ -71,6 +75,10 @@ public class BusterAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (V2RuntimeMode.isEnabled(this)) {
+            DiagnosticLogger.log(this, "event", "ignored by legacy service because v2 enforcement is enabled");
+            return;
+        }
         if (event == null || (event.getEventType() & WINDOW_EVENT_TYPES) == 0) {
             return;
         }

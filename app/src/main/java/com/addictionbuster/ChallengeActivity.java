@@ -48,6 +48,11 @@ public class ChallengeActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (V2RuntimeMode.isEnabled(this)) {
+            DiagnosticLogger.log(this, "challenge", "finish legacy ChallengeActivity because v2 enforcement is enabled");
+            finish();
+            return;
+        }
         targetPackage = getIntent().getStringExtra(BusterAccessibilityService.EXTRA_TARGET_PACKAGE);
         targetLabel = getIntent().getStringExtra(BusterAccessibilityService.EXTRA_TARGET_LABEL);
         if (targetPackage == null) {
