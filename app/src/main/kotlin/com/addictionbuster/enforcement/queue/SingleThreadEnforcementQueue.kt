@@ -4,6 +4,7 @@ import com.addictionbuster.enforcement.EnforcementContext
 import com.addictionbuster.enforcement.EnforcementProcessResult
 import com.addictionbuster.enforcement.InvalidEnforcementContextException
 import com.addictionbuster.enforcement.UnifiedEnforcementProcessor
+import com.addictionbuster.enforcement.storage.UsageCommitWriter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SingleThreadEnforcementQueue(
-    private val processor: UnifiedEnforcementProcessor = UnifiedEnforcementProcessor()
+    private val processor: UnifiedEnforcementProcessor = UnifiedEnforcementProcessor(),
+    private val usageCommitWriter: UsageCommitWriter? = null
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
     private val channel = Channel<QueuedEvent>(Channel.UNLIMITED)
@@ -52,12 +54,15 @@ class SingleThreadEnforcementQueue(
 
     private fun processQueuedEvent(event: QueuedEvent) {
         try {
-            event.result.complete(
-                processor.process(
-                    previousContext = event.previousContext,
-                    currentContext = event.currentContext
-                )
+            val processResult = processor.process(
+                previousContext = event.previousContext,
+                currentContext = event.currentContext
             )
+            usageCommitWriter?.commit(
+                previousContext = event.previousContext,
+                usageCommit = processResult.usageCommit
+            )
+            event.result.complete(processResult)
         } catch (throwable: Throwable) {
             event.result.completeExceptionally(throwable)
         }

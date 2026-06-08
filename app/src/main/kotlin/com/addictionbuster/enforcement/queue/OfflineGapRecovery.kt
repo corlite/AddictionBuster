@@ -1,13 +1,16 @@
 package com.addictionbuster.enforcement.queue
 
 import com.addictionbuster.enforcement.EnforcementEventType
+import com.addictionbuster.enforcement.ScreenState
 import com.addictionbuster.enforcement.storage.LocalEventStore
 import com.addictionbuster.enforcement.storage.LocalStateRepository
 import com.addictionbuster.enforcement.storage.OfflineGap
+import com.addictionbuster.enforcement.storage.UsageCommitWriter
 
 class OfflineGapRecovery(
     private val stateRepository: LocalStateRepository,
-    private val eventStore: LocalEventStore
+    private val eventStore: LocalEventStore,
+    private val usageCommitWriter: UsageCommitWriter? = null
 ) {
     fun recover(
         nowMillis: Long,
@@ -32,6 +35,16 @@ class OfflineGapRecovery(
                 "requiresUserConfirmation" to gap.requiresUserConfirmation.toString()
             )
         )
+        if (
+            gap.durationMillis > 0L &&
+            gap.previousForegroundIdentityKey.isNotBlank() &&
+            gap.previousScreenState == ScreenState.UNLOCKED
+        ) {
+            usageCommitWriter?.markOfflineGapPending(
+                identityKey = gap.previousForegroundIdentityKey,
+                durationMillis = gap.durationMillis
+            )
+        }
         return gap
     }
 }
