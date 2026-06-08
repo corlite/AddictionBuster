@@ -24,6 +24,21 @@ object AndroidSafeZonePolicyFactory {
         "com.android.settings"
     )
 
+    private val defaultPermissionSettingsPackages = setOf(
+        "com.android.settings",
+        "com.android.permissioncontroller",
+        "com.google.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
+        "com.miui.securitycenter",
+        "com.miui.securityadd",
+        "com.coloros.safecenter",
+        "com.oplus.safecenter",
+        "com.vivo.permissionmanager",
+        "com.huawei.systemmanager",
+        "com.hihonor.systemmanager"
+    )
+
     fun create(context: Context): SafeZonePolicy {
         val applicationContext = context.applicationContext
         val launcherPackages = resolveLauncherPackages(applicationContext)
@@ -35,7 +50,7 @@ object AndroidSafeZonePolicyFactory {
             phonePackages = defaultPhonePackages,
             inputMethodPackages = inputMethodPackages,
             systemSettingsPackages = defaultSettingsPackages,
-            permissionSettingsPackages = defaultSettingsPackages
+            permissionSettingsPackages = defaultPermissionSettingsPackages
         )
     }
 

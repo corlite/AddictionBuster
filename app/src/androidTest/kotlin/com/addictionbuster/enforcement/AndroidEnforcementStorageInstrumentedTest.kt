@@ -94,6 +94,25 @@ class AndroidEnforcementStorageInstrumentedTest {
         assertEquals(5000L, phoneUsage.dailyUsedMillis)
     }
 
+    @Test
+    fun testPermissionControllerIsSafeZone() {
+        val policy = AndroidSafeZonePolicyFactory.create(context())
+        val identity = AppIdentity(
+            rawPackageName = "com.google.android.permissioncontroller",
+            canonicalPackageName = "com.google.android.permissioncontroller",
+            displayName = "Permission Controller",
+            identityType = IdentityType.NORMAL,
+            cloneGroupId = "",
+            containerPackageName = "",
+            userHandleKey = "",
+            isSystem = true,
+            isLauncher = false,
+            isEmergencyAllowed = false
+        )
+
+        assertTrue(policy.isSafe(identity))
+    }
+
     private fun context() =
         InstrumentationRegistry.getInstrumentation().targetContext
 }

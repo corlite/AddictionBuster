@@ -1,6 +1,5 @@
 package com.addictionbuster.enforcement.runtime
 
-import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Intent
 import android.util.Log
@@ -199,13 +198,23 @@ object V2AccessibilityRuntime {
         }
 
         private fun handleMissingRules(identity: AppIdentity, nowMillis: Long) {
+            val safeZonePolicy = AndroidSafeZonePolicyFactory.create(service)
+            if (safeZonePolicy.isSafe(identity)) {
+                stateRepository.save(
+                    PersistentRuntimeState(
+                        lastEventTimeMillis = nowMillis,
+                        lastForegroundIdentityKey = identity.identityKey,
+                        lastRawPackageName = identity.rawPackageName,
+                        lastScreenState = ScreenState.UNLOCKED,
+                        bootMarker = bootMarker
+                    )
+                )
+                return
+            }
             service.startActivity(
                 Intent(service, V2RequiredSetupActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
-            if (!AndroidSafeZonePolicyFactory.create(service).isSafe(identity)) {
-                service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-            }
             stateRepository.save(
                 PersistentRuntimeState(
                     lastEventTimeMillis = nowMillis,
