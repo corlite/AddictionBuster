@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import com.addictionbuster.BusterAccessibilityService
+import com.addictionbuster.V2DiagnosticBridge
 import com.addictionbuster.V2EnforcementForegroundService
 import com.addictionbuster.bootstrap.V2RequiredSetupActivity
 import com.addictionbuster.enforcement.AndroidSafeZonePolicyFactory
@@ -20,7 +21,9 @@ import com.addictionbuster.enforcement.ScreenState
 import com.addictionbuster.enforcement.UsageSnapshot
 import com.addictionbuster.enforcement.executor.AccessibilityHomeActionPerformer
 import com.addictionbuster.enforcement.executor.EnforcementExecutor
+import com.addictionbuster.enforcement.executor.EnforcementExecutionResult
 import com.addictionbuster.enforcement.executor.OverlayActionHandler
+import com.addictionbuster.enforcement.executor.OverlayPermissionChecker
 import com.addictionbuster.enforcement.executor.SimpleOverlayController
 import com.addictionbuster.enforcement.health.AndroidSystemHealthReader
 import com.addictionbuster.enforcement.identity.AndroidAppIdentityResolver
@@ -58,6 +61,7 @@ object V2AccessibilityRuntime {
         holder.queue.start()
         holder.recoverOfflineGap()
         runtime = holder
+        V2DiagnosticBridge.log(service, "v2", "runtime connected")
         Log.d(TAG, "v2 accessibility runtime connected")
     }
 
@@ -71,7 +75,16 @@ object V2AccessibilityRuntime {
         val packageName = event.packageName?.toString().orEmpty()
         if (packageName.isBlank()) return
         scope.launch {
-            holder.processEvent(event, packageName)
+            try {
+                holder.processEvent(event, packageName)
+            } catch (throwable: Throwable) {
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "runtime exception package=$packageName type=${event.eventType} error=${throwable.message}"
+                )
+                Log.w(TAG, "failed to process v2 accessibility event package=$packageName", throwable)
+            }
         }
     }
 
@@ -79,6 +92,7 @@ object V2AccessibilityRuntime {
     fun onDestroy() {
         runtime?.executor?.removeOverlays()
         runtime = null
+        Log.d(TAG, "v2 accessibility runtime destroyed")
     }
 
     private class RuntimeHolder(
@@ -116,12 +130,27 @@ object V2AccessibilityRuntime {
         suspend fun processEvent(event: AccessibilityEvent, packageName: String) {
             val nowMillis = System.currentTimeMillis()
             val identity = identityResolver.resolve(packageName)
+            V2DiagnosticBridge.log(
+                service,
+                "v2",
+                "event type=${event.eventType} package=$packageName class=${event.className ?: ""} identity=${identity.identityKey}"
+            )
             val rules = try {
                 ruleRepository.load()
             } catch (throwable: Throwable) {
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "rules unavailable package=$packageName identity=${identity.identityKey} error=${throwable.message}"
+                )
                 handleMissingRules(identity, nowMillis)
                 return
             }
+            V2DiagnosticBridge.log(
+                service,
+                "v2",
+                "rules loaded appPolicies=${rules.appPoliciesByIdentity.size} targetPolicy=${rules.appPoliciesByIdentity.containsKey(identity.identityKey)}"
+            )
             val currentContext = buildContext(
                 nowMillis = nowMillis,
                 event = event,
@@ -137,7 +166,17 @@ object V2AccessibilityRuntime {
                 previousContext = previousContext,
                 currentContext = currentContext
             )
-            executor.execute(result.decision, currentContext)
+            V2DiagnosticBridge.log(
+                service,
+                "v2",
+                "decision package=$packageName action=${result.decision.action} reason=${result.decision.reasonCode} overlay=${result.decision.overlayType} fatal=${currentContext.systemHealthState.fatalIssues}"
+            )
+            val executionResult = executor.execute(result.decision, currentContext)
+            V2DiagnosticBridge.log(
+                service,
+                "v2",
+                "execution package=$packageName result=${executionResult.logName()} action=${executionResult.decision.action}"
+            )
             decisionEventRecorder.record(currentContext, result.decision, bootMarker)
             stateRepository.save(currentContext.toPersistentState(bootMarker))
             lastContext = currentContext
@@ -160,6 +199,12 @@ object V2AccessibilityRuntime {
             val appUsage = appUsageRepository.load(identity.identityKey)
             val phoneUsage = phoneUsageRepository.load()
             val activePass = passRepository.load()
+            val systemHealth = healthReader.read(
+                notificationListenerConnected = false,
+                foregroundServiceRunning = V2EnforcementForegroundService.isRunning()
+            ).copy(
+                overlayPermissionGranted = true
+            )
             return EnforcementContext(
                 nowMillis = nowMillis,
                 eventType = if (foregroundChanged) {
@@ -193,10 +238,7 @@ object V2AccessibilityRuntime {
                     phoneSessionUsedMillis = phoneUsage.sessionUsedMillis,
                     sleepLockActive = sleepScheduleEvaluator.isSleepActive(rules.sleepPolicy, nowMillis)
                 ),
-                systemHealthState = healthReader.read(
-                    notificationListenerConnected = false,
-                    foregroundServiceRunning = V2EnforcementForegroundService.isRunning()
-                ),
+                systemHealthState = systemHealth,
                 safeZonePolicy = AndroidSafeZonePolicyFactory.create(service),
                 activePass = activePass,
                 activeCooldown = null
@@ -303,14 +345,27 @@ class RuntimeExecutor(
     private val executor = EnforcementExecutor(
         context = service,
         overlayController = overlayController,
-        homeActionPerformer = AccessibilityHomeActionPerformer(service)
+        homeActionPerformer = AccessibilityHomeActionPerformer(service),
+        overlayPermissionChecker = object : OverlayPermissionChecker {
+            override fun canShowOverlay(): Boolean = true
+        }
     )
 
-    fun execute(decision: com.addictionbuster.enforcement.EnforcementDecision, context: EnforcementContext) {
-        executor.execute(decision, context)
-    }
+    fun execute(
+        decision: com.addictionbuster.enforcement.EnforcementDecision,
+        context: EnforcementContext
+    ): EnforcementExecutionResult = executor.execute(decision, context)
 
     fun removeOverlays() {
         overlayController.removeAll()
     }
 }
+
+private fun EnforcementExecutionResult.logName(): String =
+    when (this) {
+        is EnforcementExecutionResult.HomeFailed -> "HomeFailed"
+        is EnforcementExecutionResult.HomeSent -> "HomeSent"
+        is EnforcementExecutionResult.HomeSuppressed -> "HomeSuppressed"
+        is EnforcementExecutionResult.NoAction -> "NoAction"
+        is EnforcementExecutionResult.OverlayShown -> "OverlayShown"
+    }

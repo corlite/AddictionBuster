@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.addictionbuster.V2DiagnosticBridge
 import com.addictionbuster.enforcement.EnforcementAction
 import com.addictionbuster.enforcement.EnforcementContext
 import com.addictionbuster.enforcement.EnforcementDecision
@@ -35,8 +36,18 @@ class SimpleOverlayController(
                 val view = buildView(decision)
                 windowManager.addView(view, layoutParams())
                 currentView = view
+                V2DiagnosticBridge.log(
+                    this.context,
+                    "v2",
+                    "overlay shown action=${decision.action} package=${decision.targetIdentity.rawPackageName} type=$windowType"
+                )
                 result.set(true)
-            } catch (_: Throwable) {
+            } catch (throwable: Throwable) {
+                V2DiagnosticBridge.log(
+                    this.context,
+                    "v2",
+                    "overlay show failed action=${decision.action} package=${decision.targetIdentity.rawPackageName} type=$windowType error=${throwable.message}"
+                )
                 currentView = null
                 result.set(false)
             }

@@ -96,6 +96,7 @@ final class DiagnosticLogger {
             String line = lines[index];
             if (line.contains("[event]")
                     || line.contains("[service]")
+                    || line.contains("[v2]")
                     || line.contains("[challenge]")
                     || line.contains("[media]")
                     || line.contains("[usage]")
