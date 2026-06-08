@@ -27,6 +27,12 @@
             android:taskAffinity="" />
 
         <activity
+            android:name=".bootstrap.V2RequiredSetupActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask" />
+
+        <activity
             android:name=".DiagnosticActivity"
             android:exported="false" />
 

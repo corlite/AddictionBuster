@@ -10,6 +10,9 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.addictionbuster.bootstrap.V2InitializationGate;
+import com.addictionbuster.bootstrap.V2RequiredSetupActivity;
+
 public class MainActivity extends Activity {
     private TextView selectedCountView;
 
@@ -17,6 +20,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         DiagnosticLogger.log(this, "main", "home screen created");
+        if (V2InitializationGate.requiresSetup(this)) {
+            startActivity(new Intent(this, V2RequiredSetupActivity.class));
+        }
         setContentView(buildContent());
     }
 
