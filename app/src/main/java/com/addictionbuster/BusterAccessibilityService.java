@@ -64,6 +64,7 @@ public class BusterAccessibilityService extends AccessibilityService {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         if (V2RuntimeMode.isEnabled(this)) {
             DiagnosticLogger.log(this, "service", "v2 enforcement enabled; legacy accessibility judge disabled");
+            com.addictionbuster.enforcement.runtime.V2AccessibilityRuntime.onServiceConnected(this);
             return;
         }
         RuleStore.clearChallengePackage(this);
@@ -76,7 +77,7 @@ public class BusterAccessibilityService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (V2RuntimeMode.isEnabled(this)) {
-            DiagnosticLogger.log(this, "event", "ignored by legacy service because v2 enforcement is enabled");
+            com.addictionbuster.enforcement.runtime.V2AccessibilityRuntime.onAccessibilityEvent(this, event);
             return;
         }
         if (event == null || (event.getEventType() & WINDOW_EVENT_TYPES) == 0) {
@@ -199,6 +200,9 @@ public class BusterAccessibilityService extends AccessibilityService {
         unregisterScreenReceiver();
         removePhoneLimitOverlay("service destroyed");
         removeChallengeOverlay("service destroyed", true);
+        if (V2RuntimeMode.isEnabled(this)) {
+            com.addictionbuster.enforcement.runtime.V2AccessibilityRuntime.onDestroy();
+        }
         super.onDestroy();
     }
 
