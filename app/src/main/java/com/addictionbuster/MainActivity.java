@@ -20,6 +20,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         DiagnosticLogger.log(this, "main", "home screen created");
+        if (V2RuntimeMode.isEnabled(this)) {
+            V2EnforcementForegroundService.start(this);
+        }
         if (V2InitializationGate.requiresSetup(this)) {
             startActivity(new Intent(this, V2RequiredSetupActivity.class));
         }

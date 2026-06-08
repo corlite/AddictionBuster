@@ -1,6 +1,6 @@
 package com.addictionbuster;
 
-final class AppRule {
+public final class AppRule {
     static final int DEFAULT_DAILY_QUOTA_MINUTES = 30;
     static final int DEFAULT_SESSION_LIMIT_MINUTES = 10;
     static final int DEFAULT_WAIT_SECONDS = 15;

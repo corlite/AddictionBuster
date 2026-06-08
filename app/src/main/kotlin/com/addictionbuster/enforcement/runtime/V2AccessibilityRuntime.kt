@@ -6,9 +6,12 @@ import android.util.Log
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import com.addictionbuster.BusterAccessibilityService
+import com.addictionbuster.V2EnforcementForegroundService
 import com.addictionbuster.bootstrap.V2RequiredSetupActivity
 import com.addictionbuster.enforcement.AndroidSafeZonePolicyFactory
+import com.addictionbuster.enforcement.ActivePass
 import com.addictionbuster.enforcement.AppIdentity
+import com.addictionbuster.enforcement.EnforcementAction
 import com.addictionbuster.enforcement.EnforcementContext
 import com.addictionbuster.enforcement.EnforcementEventType
 import com.addictionbuster.enforcement.OverlayType
@@ -17,6 +20,7 @@ import com.addictionbuster.enforcement.ScreenState
 import com.addictionbuster.enforcement.UsageSnapshot
 import com.addictionbuster.enforcement.executor.AccessibilityHomeActionPerformer
 import com.addictionbuster.enforcement.executor.EnforcementExecutor
+import com.addictionbuster.enforcement.executor.OverlayActionHandler
 import com.addictionbuster.enforcement.executor.SimpleOverlayController
 import com.addictionbuster.enforcement.health.AndroidSystemHealthReader
 import com.addictionbuster.enforcement.identity.AndroidAppIdentityResolver
@@ -191,7 +195,7 @@ object V2AccessibilityRuntime {
                 ),
                 systemHealthState = healthReader.read(
                     notificationListenerConnected = false,
-                    foregroundServiceRunning = false
+                    foregroundServiceRunning = V2EnforcementForegroundService.isRunning()
                 ),
                 safeZonePolicy = AndroidSafeZonePolicyFactory.create(service),
                 activePass = activePass,
@@ -245,13 +249,14 @@ object V2AccessibilityRuntime {
                 val eventStore = LocalEventStore(service)
                 val stateRepository = LocalStateRepository(service)
                 val commitWriter = UsageCommitWriter(appUsageRepository, phoneUsageRepository)
-                val runtimeExecutor = RuntimeExecutor(service)
+                val passRepository = LocalPassRepository(service)
+                val runtimeExecutor = RuntimeExecutor(service, passRepository)
                 return RuntimeHolder(
                     service = service,
                     ruleRepository = LocalRuleRepository(service),
                     appUsageRepository = appUsageRepository,
                     phoneUsageRepository = phoneUsageRepository,
-                    passRepository = LocalPassRepository(service),
+                    passRepository = passRepository,
                     setupStateRepository = LocalSetupStateRepository(service),
                     stateRepository = stateRepository,
                     eventStore = eventStore,
@@ -275,10 +280,25 @@ object V2AccessibilityRuntime {
     }
 }
 
-class RuntimeExecutor(service: BusterAccessibilityService) {
+class RuntimeExecutor(
+    service: BusterAccessibilityService,
+    passRepository: LocalPassRepository
+) {
     private val overlayController = SimpleOverlayController(
         context = service,
-        windowType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        windowType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        actionHandler = object : OverlayActionHandler {
+            override fun onPrimaryAction(decision: com.addictionbuster.enforcement.EnforcementDecision) {
+                if (decision.action != EnforcementAction.SHOW_APP_CHALLENGE) return
+                if (decision.durationMillis <= 0L) return
+                passRepository.save(
+                    ActivePass(
+                        identityKey = decision.targetIdentity.identityKey,
+                        untilMillis = System.currentTimeMillis() + decision.durationMillis
+                    )
+                )
+            }
+        }
     )
     private val executor = EnforcementExecutor(
         context = service,

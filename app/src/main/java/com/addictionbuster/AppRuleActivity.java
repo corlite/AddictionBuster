@@ -230,6 +230,7 @@ public class AppRuleActivity extends Activity {
         blockedPackages.add(packageName);
         RuleStore.saveBlockedPackages(this, blockedPackages);
         RuleStore.saveAppRule(this, packageName, rule);
+        V2RuleBridge.saveAppRule(this, packageName, rule);
         Toast.makeText(this, "规则已保存", Toast.LENGTH_SHORT).show();
     }
 
@@ -238,6 +239,7 @@ public class AppRuleActivity extends Activity {
         blockedPackages.remove(packageName);
         RuleStore.saveBlockedPackages(this, blockedPackages);
         RuleStore.clearAppRule(this, packageName);
+        V2RuleBridge.clearAppRule(this, packageName);
         Toast.makeText(this, "已停用拦截", Toast.LENGTH_SHORT).show();
         finish();
     }

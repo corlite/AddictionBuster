@@ -156,13 +156,14 @@ class EnforcementEngine {
                 *pageEvaluation.eventsToRecord.toTypedArray()
             )
 
-            appPolicy != null && appPolicy.challengeEnabled -> decision(
+            appPolicy != null && appPolicy.challengeEnabled -> decisionWithDuration(
                 EnforcementAction.SHOW_APP_CHALLENGE,
                 Priority.CHALLENGE,
                 app,
                 ReasonCode.APP_CHALLENGE_REQUIRED,
                 "app challenge is required",
                 OverlayType.APP_CHALLENGE,
+                appPolicy.passthroughMillis,
                 *mergeEvents(pageEvaluation.eventsToRecord, "CHALLENGE_SHOWN")
             )
 
@@ -301,6 +302,25 @@ class EnforcementEngine {
         overlayType = overlayType,
         eventsToRecord = events.toList()
     )
+
+    private fun decisionWithDuration(
+        action: EnforcementAction,
+        priority: Int,
+        target: AppIdentity,
+        reasonCode: ReasonCode,
+        reasonText: String,
+        overlayType: OverlayType,
+        durationMillis: Long,
+        vararg events: String
+    ): EnforcementDecision = decision(
+        action,
+        priority,
+        target,
+        reasonCode,
+        reasonText,
+        overlayType,
+        *events
+    ).copy(durationMillis = durationMillis)
 
     private object Priority {
         const val SAFE_ZONE_ALLOW = 0

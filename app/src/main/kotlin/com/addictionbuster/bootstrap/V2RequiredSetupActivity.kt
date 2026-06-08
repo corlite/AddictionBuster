@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.addictionbuster.MainActivity
+import com.addictionbuster.V2EnforcementForegroundService
 import com.addictionbuster.enforcement.storage.LocalSetupStateRepository
 
 class V2RequiredSetupActivity : Activity() {
@@ -105,6 +106,7 @@ class V2RequiredSetupActivity : Activity() {
         )
         root.addView(button("我已完成权限设置，进入主界面") {
             LocalSetupStateRepository(applicationContext).markSetupCompleted(System.currentTimeMillis())
+            V2EnforcementForegroundService.start(this)
             startActivity(
                 Intent(this, MainActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
