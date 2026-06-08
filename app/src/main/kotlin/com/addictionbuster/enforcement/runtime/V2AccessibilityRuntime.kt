@@ -31,6 +31,7 @@ import com.addictionbuster.enforcement.storage.LocalEventStore
 import com.addictionbuster.enforcement.storage.LocalPassRepository
 import com.addictionbuster.enforcement.storage.LocalPhoneUsageRepository
 import com.addictionbuster.enforcement.storage.LocalRuleRepository
+import com.addictionbuster.enforcement.storage.LocalSetupStateRepository
 import com.addictionbuster.enforcement.storage.LocalStateRepository
 import com.addictionbuster.enforcement.storage.PersistentRuntimeState
 import com.addictionbuster.enforcement.storage.UsageCommitWriter
@@ -82,6 +83,7 @@ object V2AccessibilityRuntime {
         private val appUsageRepository: LocalAppUsageRepository,
         private val phoneUsageRepository: LocalPhoneUsageRepository,
         private val passRepository: LocalPassRepository,
+        private val setupStateRepository: LocalSetupStateRepository,
         private val stateRepository: LocalStateRepository,
         private val eventStore: LocalEventStore,
         private val identityResolver: AndroidAppIdentityResolver,
@@ -199,7 +201,7 @@ object V2AccessibilityRuntime {
 
         private fun handleMissingRules(identity: AppIdentity, nowMillis: Long) {
             val safeZonePolicy = AndroidSafeZonePolicyFactory.create(service)
-            if (safeZonePolicy.isSafe(identity)) {
+            if (safeZonePolicy.isSafe(identity) || setupStateRepository.isSetupCompleted()) {
                 stateRepository.save(
                     PersistentRuntimeState(
                         lastEventTimeMillis = nowMillis,
@@ -250,6 +252,7 @@ object V2AccessibilityRuntime {
                     appUsageRepository = appUsageRepository,
                     phoneUsageRepository = phoneUsageRepository,
                     passRepository = LocalPassRepository(service),
+                    setupStateRepository = LocalSetupStateRepository(service),
                     stateRepository = stateRepository,
                     eventStore = eventStore,
                     identityResolver = AndroidAppIdentityResolver(service, safeZonePolicy),
