@@ -6,14 +6,28 @@ class EnforcementEngine {
         val identityKey = app.identityKey
         val rules = context.ruleSnapshot
         val usage = context.usageSnapshot
-        val appPolicy = if (app.isSystem || app.isLauncher || app.isEmergencyAllowed) {
+        val safeZoneCategory = context.safeZonePolicy.categoryFor(app)
+        val appPolicy = if (safeZoneCategory != null || app.isSystem || app.isLauncher || app.isEmergencyAllowed) {
             null
         } else {
             rules.requireAppPolicyFor(identityKey)
         }
-        val pageEvaluation = pageEvaluation(context, app)
+        val pageEvaluation = if (safeZoneCategory != null || app.isSystem || app.isLauncher || app.isEmergencyAllowed) {
+            PageEvaluation(decision = null, eventsToRecord = emptyList())
+        } else {
+            pageEvaluation(context, app)
+        }
 
         return when {
+            safeZoneCategory != null -> decision(
+                EnforcementAction.ALLOW,
+                Priority.SAFE_ZONE_ALLOW,
+                app,
+                ReasonCode.SAFE_ZONE_ALLOW,
+                "safe zone identity is always allowed: $safeZoneCategory",
+                OverlayType.NONE
+            )
+
             app.isSystem || app.isLauncher -> decision(
                 EnforcementAction.ALLOW,
                 Priority.SYSTEM_ALLOW,
@@ -30,6 +44,16 @@ class EnforcementEngine {
                 ReasonCode.EMERGENCY_ALLOW,
                 "emergency identity is allowed",
                 OverlayType.NONE
+            )
+
+            context.systemHealthState.hasFatalIssue -> decision(
+                EnforcementAction.FAIL_CLOSED_GLOBAL,
+                Priority.SYSTEM_HEALTH_FAIL_CLOSED,
+                app,
+                ReasonCode.SYSTEM_HEALTH_FAIL_CLOSED,
+                "system health fatal issues: ${context.systemHealthState.fatalIssues.joinToString()}",
+                OverlayType.NONE,
+                "SYSTEM_HEALTH_FAIL_CLOSED"
             )
 
             rules.clonePolicy.shouldBlock(app) -> decision(
@@ -153,6 +177,12 @@ class EnforcementEngine {
         if (failedOverlayType == OverlayType.NONE) {
             throw InvalidEnforcementContextException("failedOverlayType must be a blocking overlay")
         }
+        val safeZoneCategory = context.safeZonePolicy.categoryFor(context.foregroundApp)
+        if (safeZoneCategory != null) {
+            throw InvalidEnforcementContextException(
+                "overlay failure was reported for safe zone identity: $safeZoneCategory"
+            )
+        }
         return EnforcementDecision(
             action = EnforcementAction.FAIL_CLOSED_HOME,
             priority = Priority.SYSTEM_ALLOW,
@@ -254,20 +284,22 @@ class EnforcementEngine {
     )
 
     private object Priority {
-        const val SYSTEM_ALLOW = 0
-        const val EMERGENCY_ALLOW = 1
-        const val CLONE_BLOCK = 2
-        const val SLEEP_LOCK = 3
-        const val PHONE_DAILY = 4
-        const val PHONE_SESSION = 5
-        const val APP_DAILY = 6
-        const val APP_SESSION = 7
-        const val APP_CONTINUOUS = 8
-        const val APP_OPEN_COUNT = 9
-        const val PAGE = 10
-        const val COOLDOWN = 11
-        const val CHALLENGE = 12
-        const val ALLOW = 13
+        const val SAFE_ZONE_ALLOW = 0
+        const val SYSTEM_ALLOW = 1
+        const val EMERGENCY_ALLOW = 2
+        const val SYSTEM_HEALTH_FAIL_CLOSED = 3
+        const val CLONE_BLOCK = 4
+        const val SLEEP_LOCK = 5
+        const val PHONE_DAILY = 6
+        const val PHONE_SESSION = 7
+        const val APP_DAILY = 8
+        const val APP_SESSION = 9
+        const val APP_CONTINUOUS = 10
+        const val APP_OPEN_COUNT = 11
+        const val PAGE = 12
+        const val COOLDOWN = 13
+        const val CHALLENGE = 14
+        const val ALLOW = 15
     }
 
     private data class PageEvaluation(

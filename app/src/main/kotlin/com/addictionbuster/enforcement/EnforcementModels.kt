@@ -57,12 +57,15 @@ enum class EnforcementAction {
     SHOW_COOLDOWN_BLOCK,
     GO_HOME,
     NO_OP,
-    FAIL_CLOSED_HOME
+    FAIL_CLOSED_HOME,
+    FAIL_CLOSED_GLOBAL
 }
 
 enum class ReasonCode {
+    SAFE_ZONE_ALLOW,
     SELF_OR_SYSTEM_ALLOW,
     EMERGENCY_ALLOW,
+    SYSTEM_HEALTH_FAIL_CLOSED,
     CLONE_POLICY_BLOCK,
     SLEEP_LOCK_BLOCK,
     PHONE_TOTAL_LIMIT_BLOCK,
@@ -84,6 +87,24 @@ enum class PageAction {
     BLOCK,
     CHALLENGE,
     RECORD_ONLY
+}
+
+enum class SystemHealthIssue {
+    ACCESSIBILITY_DISCONNECTED,
+    OVERLAY_PERMISSION_MISSING,
+    NOTIFICATION_LISTENER_DISCONNECTED,
+    BATTERY_OPTIMIZATION_ACTIVE,
+    FOREGROUND_SERVICE_STOPPED
+}
+
+enum class SafeZoneCategory {
+    SELF_APP,
+    LAUNCHER,
+    SYSTEM_UI,
+    PHONE_OR_EMERGENCY_DIALER,
+    INPUT_METHOD,
+    SYSTEM_SETTINGS,
+    PERMISSION_SETTINGS
 }
 
 class InvalidEnforcementContextException(message: String) : RuntimeException(message)
@@ -120,6 +141,70 @@ data class AppIdentity(
                 identityType == IdentityType.WORK_PROFILE ||
                 identityType == IdentityType.CLONE_CONTAINER ||
                 identityType == IdentityType.MANUAL_CLONE
+}
+
+data class SystemHealthState(
+    val accessibilityConnected: Boolean,
+    val overlayPermissionGranted: Boolean,
+    val notificationListenerConnected: Boolean,
+    val batteryOptimizationsIgnored: Boolean,
+    val foregroundServiceRunning: Boolean
+) {
+    val fatalIssues: Set<SystemHealthIssue>
+        get() = buildSet {
+            if (!accessibilityConnected) add(SystemHealthIssue.ACCESSIBILITY_DISCONNECTED)
+            if (!overlayPermissionGranted) add(SystemHealthIssue.OVERLAY_PERMISSION_MISSING)
+            if (!foregroundServiceRunning) add(SystemHealthIssue.FOREGROUND_SERVICE_STOPPED)
+        }
+
+    val warningIssues: Set<SystemHealthIssue>
+        get() = buildSet {
+            if (!notificationListenerConnected) add(SystemHealthIssue.NOTIFICATION_LISTENER_DISCONNECTED)
+            if (!batteryOptimizationsIgnored) add(SystemHealthIssue.BATTERY_OPTIMIZATION_ACTIVE)
+        }
+
+    val hasFatalIssue: Boolean
+        get() = fatalIssues.isNotEmpty()
+}
+
+data class SafeZonePolicy(
+    val selfPackageName: String,
+    val launcherPackages: Set<String>,
+    val systemUiPackages: Set<String>,
+    val phonePackages: Set<String>,
+    val inputMethodPackages: Set<String>,
+    val systemSettingsPackages: Set<String>,
+    val permissionSettingsPackages: Set<String>
+) {
+    init {
+        requireText(selfPackageName, "selfPackageName")
+        if (launcherPackages.isEmpty()) {
+            throw InvalidEnforcementContextException("launcherPackages must not be empty")
+        }
+    }
+
+    fun categoryFor(identity: AppIdentity): SafeZoneCategory? {
+        val packageName = identity.rawPackageName
+        return when {
+            packageName == selfPackageName || identity.canonicalPackageName == selfPackageName ->
+                SafeZoneCategory.SELF_APP
+            identity.isLauncher || packageName in launcherPackages || identity.canonicalPackageName in launcherPackages ->
+                SafeZoneCategory.LAUNCHER
+            identity.isSystem && (packageName in systemUiPackages || identity.canonicalPackageName in systemUiPackages) ->
+                SafeZoneCategory.SYSTEM_UI
+            packageName in phonePackages || identity.canonicalPackageName in phonePackages || identity.isEmergencyAllowed ->
+                SafeZoneCategory.PHONE_OR_EMERGENCY_DIALER
+            packageName in inputMethodPackages || identity.canonicalPackageName in inputMethodPackages ->
+                SafeZoneCategory.INPUT_METHOD
+            packageName in systemSettingsPackages || identity.canonicalPackageName in systemSettingsPackages ->
+                SafeZoneCategory.SYSTEM_SETTINGS
+            packageName in permissionSettingsPackages || identity.canonicalPackageName in permissionSettingsPackages ->
+                SafeZoneCategory.PERMISSION_SETTINGS
+            else -> null
+        }
+    }
+
+    fun isSafe(identity: AppIdentity): Boolean = categoryFor(identity) != null
 }
 
 data class PageSnapshot(
@@ -335,6 +420,8 @@ data class EnforcementContext(
     val sliceStartedAtMillis: Long,
     val ruleSnapshot: RuleSnapshot,
     val usageSnapshot: UsageSnapshot,
+    val systemHealthState: SystemHealthState,
+    val safeZonePolicy: SafeZonePolicy,
     val activePass: ActivePass?,
     val activeCooldown: ActiveCooldown?
 ) {

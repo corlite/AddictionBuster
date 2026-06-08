@@ -21,6 +21,7 @@ class UsageSliceSettler {
         if (context.activeOverlayType != OverlayType.NONE) return false
         if (context.screenState != ScreenState.UNLOCKED) return false
         val app = context.foregroundApp
+        if (context.safeZonePolicy.isSafe(app)) return false
         if (app.isSystem || app.isLauncher || app.isEmergencyAllowed) return false
         val appPolicy = context.ruleSnapshot.requireAppPolicyFor(app.identityKey)
         return appPolicy.enabled
@@ -30,6 +31,7 @@ class UsageSliceSettler {
         if (context.activeOverlayType != OverlayType.NONE) return false
         if (context.screenState != ScreenState.UNLOCKED) return false
         val app = context.foregroundApp
+        if (context.safeZonePolicy.isSafe(app)) return false
         if (app.isSystem || app.isLauncher || app.isEmergencyAllowed) return false
         if (app.identityKey in context.ruleSnapshot.globalPolicy.countWhitelistIdentities) return false
         val appPolicy = context.ruleSnapshot.requireAppPolicyFor(app.identityKey)
