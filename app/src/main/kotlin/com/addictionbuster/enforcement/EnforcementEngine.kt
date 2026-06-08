@@ -1,6 +1,8 @@
 package com.addictionbuster.enforcement
 
 class EnforcementEngine {
+    private val pageContextBufferMillis = 500L
+
     fun decide(context: EnforcementContext): EnforcementDecision {
         val app = context.foregroundApp
         val identityKey = app.identityKey
@@ -208,6 +210,23 @@ class EnforcementEngine {
     ): PageEvaluation {
         val pagePolicy = context.ruleSnapshot.pagePolicyFor(app.identityKey)
             ?: return PageEvaluation(decision = null, eventsToRecord = emptyList())
+        if (context.currentPage == null) {
+            val missingSinceMillis = context.pageContextMissingSinceMillis
+                ?: throw InvalidEnforcementContextException("page context missing without missing-since timestamp")
+            val missingDurationMillis = context.nowMillis - missingSinceMillis
+            if (missingDurationMillis < 0L) {
+                throw InvalidEnforcementContextException("page context missing-since timestamp is after nowMillis")
+            }
+            if (missingDurationMillis <= pageContextBufferMillis) {
+                return PageEvaluation(
+                    decision = null,
+                    eventsToRecord = listOf("PAGE_CONTEXT_BUFFERING")
+                )
+            }
+            throw InvalidEnforcementContextException(
+                "page context unavailable beyond buffer: ${missingDurationMillis}ms"
+            )
+        }
         if (!pagePolicy.matches(app.identityKey, context.currentPage)) {
             return PageEvaluation(decision = null, eventsToRecord = emptyList())
         }

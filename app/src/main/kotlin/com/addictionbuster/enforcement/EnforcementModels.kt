@@ -415,6 +415,7 @@ data class EnforcementContext(
     val foregroundApp: AppIdentity,
     val previousForegroundApp: AppIdentity?,
     val currentPage: PageSnapshot?,
+    val pageContextMissingSinceMillis: Long?,
     val screenState: ScreenState,
     val activeOverlayType: OverlayType,
     val foregroundStartedAtMillis: Long,
