@@ -5,7 +5,8 @@ enum class IdentityType {
     SYSTEM_CLONE,
     WORK_PROFILE,
     CLONE_CONTAINER,
-    MANUAL_CLONE
+    MANUAL_CLONE,
+    UNKNOWN_IDENTITY
 }
 
 enum class ScreenState {
@@ -141,7 +142,8 @@ data class AppIdentity(
         get() = identityType == IdentityType.SYSTEM_CLONE ||
                 identityType == IdentityType.WORK_PROFILE ||
                 identityType == IdentityType.CLONE_CONTAINER ||
-                identityType == IdentityType.MANUAL_CLONE
+                identityType == IdentityType.MANUAL_CLONE ||
+                identityType == IdentityType.UNKNOWN_IDENTITY
 }
 
 data class SystemHealthState(
@@ -245,7 +247,8 @@ data class ClonePolicy(
             }
 
             IdentityType.SYSTEM_CLONE,
-            IdentityType.WORK_PROFILE -> blockUnknownClones
+            IdentityType.WORK_PROFILE,
+            IdentityType.UNKNOWN_IDENTITY -> blockUnknownClones
 
             IdentityType.NORMAL -> false
         }
