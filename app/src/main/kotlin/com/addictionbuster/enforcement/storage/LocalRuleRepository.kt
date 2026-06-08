@@ -10,6 +10,7 @@ import com.addictionbuster.enforcement.PageAction
 import com.addictionbuster.enforcement.PagePolicy
 import com.addictionbuster.enforcement.RuleSnapshot
 import com.addictionbuster.enforcement.SleepPolicy
+import com.addictionbuster.enforcement.SleepWindow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -35,7 +36,7 @@ private fun RuleSnapshot.toJson(): JSONObject =
     JSONObject()
         .put("globalPolicy", globalPolicy.toJson())
         .put("clonePolicy", clonePolicy.toJson())
-        .put("sleepPolicy", JSONObject().put("enabled", sleepPolicy.enabled))
+        .put("sleepPolicy", sleepPolicy.toJson())
         .put("appPolicies", appPoliciesByIdentity.values.map { it.toJson() }.toJsonObjectArray())
         .put("pagePolicies", pagePoliciesByIdentity.values.map { it.toJson() }.toJsonObjectArray())
 
@@ -49,7 +50,7 @@ private fun JSONObject.toRuleSnapshot(): RuleSnapshot {
     return RuleSnapshot(
         globalPolicy = getJSONObject("globalPolicy").toGlobalPolicy(),
         clonePolicy = getJSONObject("clonePolicy").toClonePolicy(),
-        sleepPolicy = SleepPolicy(getJSONObject("sleepPolicy").getBoolean("enabled")),
+        sleepPolicy = getJSONObject("sleepPolicy").toSleepPolicy(),
         appPoliciesByIdentity = appPolicies,
         pagePoliciesByIdentity = pagePolicies
     )
@@ -87,6 +88,30 @@ private fun JSONObject.toClonePolicy(): ClonePolicy =
         allowManualCloneRules = getBoolean("allowManualCloneRules"),
         knownContainerPackages = getJSONArray("knownContainerPackages").strings(),
         manualCloneIdentities = getJSONArray("manualCloneIdentities").strings()
+    )
+
+private fun SleepPolicy.toJson(): JSONObject =
+    JSONObject()
+        .put("enabled", enabled)
+        .put("windows", windows.map { it.toJson() }.toJsonObjectArray())
+
+private fun JSONObject.toSleepPolicy(): SleepPolicy =
+    SleepPolicy(
+        enabled = getBoolean("enabled"),
+        windows = getJSONArray("windows").objects().map { it.toSleepWindow() }
+    )
+
+private fun SleepWindow.toJson(): JSONObject =
+    JSONObject()
+        .put("startMinuteOfDay", startMinuteOfDay)
+        .put("endMinuteOfDay", endMinuteOfDay)
+        .put("activeDays", activeDays.map { it.toString() }.toJsonStringArray())
+
+private fun JSONObject.toSleepWindow(): SleepWindow =
+    SleepWindow(
+        startMinuteOfDay = getInt("startMinuteOfDay"),
+        endMinuteOfDay = getInt("endMinuteOfDay"),
+        activeDays = getJSONArray("activeDays").strings().map { it.toInt() }.toSet()
     )
 
 private fun AppPolicy.toJson(): JSONObject =

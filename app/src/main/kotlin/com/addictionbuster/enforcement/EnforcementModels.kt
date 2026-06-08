@@ -256,8 +256,37 @@ data class ClonePolicy(
 }
 
 data class SleepPolicy(
-    val enabled: Boolean
-)
+    val enabled: Boolean,
+    val windows: List<SleepWindow>
+) {
+    init {
+        if (enabled && windows.isEmpty()) {
+            throw InvalidEnforcementContextException("enabled SleepPolicy must define at least one window")
+        }
+    }
+}
+
+data class SleepWindow(
+    val startMinuteOfDay: Int,
+    val endMinuteOfDay: Int,
+    val activeDays: Set<Int>
+) {
+    init {
+        requireMinute(startMinuteOfDay, "startMinuteOfDay")
+        requireMinute(endMinuteOfDay, "endMinuteOfDay")
+        if (startMinuteOfDay == endMinuteOfDay) {
+            throw InvalidEnforcementContextException("sleep window start and end must be different")
+        }
+        if (activeDays.isEmpty()) {
+            throw InvalidEnforcementContextException("sleep window activeDays must not be empty")
+        }
+        activeDays.forEach { day ->
+            if (day !in 1..7) {
+                throw InvalidEnforcementContextException("sleep window active day must be 1..7")
+            }
+        }
+    }
+}
 
 data class AppPolicy(
     val identityKey: String,
@@ -474,5 +503,11 @@ private fun requireNonNegative(value: Long, field: String) {
 private fun requireNonNegative(value: Int, field: String) {
     if (value < 0) {
         throw InvalidEnforcementContextException("$field must be >= 0")
+    }
+}
+
+private fun requireMinute(value: Int, field: String) {
+    if (value !in 0..1439) {
+        throw InvalidEnforcementContextException("$field must be between 0 and 1439")
     }
 }
