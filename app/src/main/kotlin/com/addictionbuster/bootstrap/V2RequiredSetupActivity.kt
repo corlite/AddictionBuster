@@ -12,6 +12,8 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.addictionbuster.MainActivity
+import com.addictionbuster.enforcement.storage.LocalSetupStateRepository
 
 class V2RequiredSetupActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,7 +28,7 @@ class V2RequiredSetupActivity : Activity() {
     }
 
     override fun onBackPressed() {
-        // Strong initialization gate: v2 rules must exist before leaving this flow.
+        // Strong initialization gate: user must explicitly acknowledge the setup guide.
     }
 
     private fun buildContent(): LinearLayout {
@@ -101,6 +103,14 @@ class V2RequiredSetupActivity : Activity() {
             ),
             matchWrapWithTop(10)
         )
+        root.addView(button("我已完成权限设置，进入主界面") {
+            LocalSetupStateRepository(applicationContext).markSetupCompleted(System.currentTimeMillis())
+            startActivity(
+                Intent(this, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+            finish()
+        }, matchWrapWithTop(22))
         return root
     }
 

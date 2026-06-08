@@ -1,10 +1,10 @@
 package com.addictionbuster.bootstrap
 
 import android.content.Context
-import com.addictionbuster.enforcement.storage.LocalRuleRepository
+import com.addictionbuster.enforcement.storage.LocalSetupStateRepository
 
 object V2InitializationGate {
     @JvmStatic
     fun requiresSetup(context: Context): Boolean =
-        !LocalRuleRepository(context.applicationContext).hasRules()
+        !LocalSetupStateRepository(context.applicationContext).isSetupCompleted()
 }

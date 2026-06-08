@@ -5,6 +5,7 @@ import com.addictionbuster.enforcement.storage.LocalAppUsageRepository
 import com.addictionbuster.enforcement.storage.LocalEventStore
 import com.addictionbuster.enforcement.storage.LocalPhoneUsageRepository
 import com.addictionbuster.enforcement.storage.LocalRuleRepository
+import com.addictionbuster.enforcement.storage.LocalSetupStateRepository
 import com.addictionbuster.enforcement.storage.LocalStateRepository
 import com.addictionbuster.enforcement.storage.PersistentRuntimeState
 import org.junit.Assert.assertEquals
@@ -111,6 +112,16 @@ class AndroidEnforcementStorageInstrumentedTest {
         )
 
         assertTrue(policy.isSafe(identity))
+    }
+
+    @Test
+    fun testSetupCompletionMarkerPersists() {
+        val repository = LocalSetupStateRepository(context())
+
+        assertFalse(repository.isSetupCompleted())
+        repository.markSetupCompleted(completedAtMillis = 1234L)
+
+        assertTrue(LocalSetupStateRepository(context()).isSetupCompleted())
     }
 
     private fun context() =
