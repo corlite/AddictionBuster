@@ -107,6 +107,7 @@ public class PhoneLimitActivity extends Activity {
         int dailyLimit = intValue(dailyLimitInput, 0);
         int sessionLimit = intValue(sessionLimitInput, 0);
         RuleStore.savePhoneLimits(this, dailyLimit, sessionLimit);
+        V2RuleBridge.savePhoneLimits(this, dailyLimit, sessionLimit);
         updateUsage();
         Toast.makeText(this, "手机时长限制已保存", Toast.LENGTH_SHORT).show();
     }
@@ -115,7 +116,7 @@ public class PhoneLimitActivity extends Activity {
         if (usageView == null) {
             return;
         }
-        long usedMinutes = RuleStore.getPhoneDailyUsedSeconds(this) / 60L;
+        long usedMinutes = V2RuleBridge.getPhoneDailyUsedMinutes(this);
         int dailyLimit = RuleStore.getPhoneDailyLimitMinutes(this);
         int sessionLimit = RuleStore.getPhoneSessionLimitMinutes(this);
         String dailyText = dailyLimit <= 0 ? "每日总时长：未开启" : "每日总时长：" + dailyLimit + " 分钟";

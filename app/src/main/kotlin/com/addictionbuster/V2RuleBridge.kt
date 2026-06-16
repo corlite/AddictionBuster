@@ -8,6 +8,7 @@ import com.addictionbuster.enforcement.RuleSnapshot
 import com.addictionbuster.enforcement.SleepPolicy
 import com.addictionbuster.enforcement.identity.CloneContainerCatalog
 import com.addictionbuster.enforcement.storage.LocalPassRepository
+import com.addictionbuster.enforcement.storage.LocalPhoneUsageRepository
 import com.addictionbuster.enforcement.storage.LocalRuleRepository
 
 object V2RuleBridge {
@@ -58,6 +59,43 @@ object V2RuleBridge {
         LocalPassRepository(context.applicationContext).clear()
         DiagnosticLogger.log(context, "rule", "cleared v2 app policy package=$packageName clearedActivePass=true")
     }
+
+    @JvmStatic
+    fun savePhoneLimits(context: Context, dailyLimitMinutes: Int, sessionLimitMinutes: Int) {
+        val repository = LocalRuleRepository(context.applicationContext)
+        val current = loadCurrentOrFresh(context, repository, "save phone limits")
+        repository.save(
+            current.copy(
+                globalPolicy = current.globalPolicy.copy(
+                    phoneDailyLimitMillis = minutesToMillis(dailyLimitMinutes),
+                    phoneSessionLimitMillis = minutesToMillis(sessionLimitMinutes)
+                )
+            )
+        )
+        DiagnosticLogger.log(
+            context,
+            "rule",
+            "saved v2 phone limits dailyMinutes=${dailyLimitMinutes.coerceAtLeast(0)} sessionMinutes=${sessionLimitMinutes.coerceAtLeast(0)}"
+        )
+    }
+
+    @JvmStatic
+    fun savePhoneWhitelist(context: Context, packageNames: Set<String>) {
+        val repository = LocalRuleRepository(context.applicationContext)
+        val current = loadCurrentOrFresh(context, repository, "save phone whitelist")
+        repository.save(
+            current.copy(
+                globalPolicy = current.globalPolicy.copy(
+                    countWhitelistIdentities = packageNames.toSet()
+                )
+            )
+        )
+        DiagnosticLogger.log(context, "rule", "saved v2 phone whitelist count=${packageNames.size}")
+    }
+
+    @JvmStatic
+    fun getPhoneDailyUsedMinutes(context: Context): Long =
+        LocalPhoneUsageRepository(context.applicationContext).load().dailyUsedMillis / 60_000L
 
     private fun loadCurrentOrFresh(
         context: Context,

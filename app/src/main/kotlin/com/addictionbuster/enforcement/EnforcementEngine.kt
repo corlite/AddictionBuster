@@ -12,7 +12,7 @@ class EnforcementEngine {
         val appPolicy = if (safeZoneCategory != null || app.isSystem || app.isLauncher || app.isEmergencyAllowed) {
             null
         } else {
-            rules.requireAppPolicyFor(identityKey)
+            rules.appPolicyFor(identityKey)
         }
         val pageEvaluation = if (safeZoneCategory != null || app.isSystem || app.isLauncher || app.isEmergencyAllowed) {
             PageEvaluation(decision = null, eventsToRecord = emptyList())
@@ -100,7 +100,17 @@ class EnforcementEngine {
                 "PHONE_LIMIT_REACHED"
             )
 
-            appPolicy != null && !appPolicy.enabled -> decision(
+            appPolicy == null -> decision(
+                EnforcementAction.ALLOW,
+                Priority.ALLOW,
+                app,
+                ReasonCode.MISSING_APP_POLICY_ALLOW,
+                "no app policy is configured for this identity",
+                OverlayType.NONE,
+                *pageEvaluation.eventsToRecord.toTypedArray()
+            )
+
+            !appPolicy.enabled -> decision(
                 EnforcementAction.ALLOW,
                 Priority.ALLOW,
                 app,
@@ -110,25 +120,25 @@ class EnforcementEngine {
                 *pageEvaluation.eventsToRecord.toTypedArray()
             )
 
-            appPolicy != null && exceeded(usage.appDailyUsedMillis, appPolicy.dailyLimitMillis) -> appLimit(
+            exceeded(usage.appDailyUsedMillis, appPolicy.dailyLimitMillis) -> appLimit(
                 app,
                 ReasonCode.APP_DAILY_LIMIT_BLOCK,
                 "app daily limit reached"
             )
 
-            appPolicy != null && exceeded(usage.appSessionUsedMillis, appPolicy.sessionLimitMillis) -> appLimit(
+            exceeded(usage.appSessionUsedMillis, appPolicy.sessionLimitMillis) -> appLimit(
                 app,
                 ReasonCode.APP_SESSION_LIMIT_BLOCK,
                 "app session limit reached"
             )
 
-            appPolicy != null && exceeded(usage.appContinuousUsedMillis, appPolicy.continuousUseLimitMillis) -> appLimit(
+            exceeded(usage.appContinuousUsedMillis, appPolicy.continuousUseLimitMillis) -> appLimit(
                 app,
                 ReasonCode.APP_CONTINUOUS_USE_BLOCK,
                 "app continuous-use limit reached"
             )
 
-            appPolicy != null && appPolicy.dailyOpenLimit > 0 && usage.appDailyOpenCount >= appPolicy.dailyOpenLimit -> appLimit(
+            appPolicy.dailyOpenLimit > 0 && usage.appDailyOpenCount >= appPolicy.dailyOpenLimit -> appLimit(
                 app,
                 ReasonCode.APP_OPEN_COUNT_BLOCK,
                 "app open-count limit reached"
@@ -156,7 +166,7 @@ class EnforcementEngine {
                 *pageEvaluation.eventsToRecord.toTypedArray()
             )
 
-            appPolicy != null && appPolicy.challengeEnabled -> decisionWithDuration(
+            appPolicy.challengeEnabled -> decisionWithDuration(
                 EnforcementAction.SHOW_APP_CHALLENGE,
                 Priority.CHALLENGE,
                 app,

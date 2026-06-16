@@ -124,6 +124,36 @@ class V2RuleBridgeInstrumentedTest {
         assertEquals(6, appPolicy.challengeRequiredTaps)
     }
 
+    @Test
+    fun savePhoneLimitsWritesV2GlobalPolicyWithoutDroppingAppRules() {
+        V2RuleBridge.saveAppRule(
+            context(),
+            "tv.danmaku.bili",
+            AppRule(500, 10, 15, 6, 2, 9, "")
+        )
+
+        V2RuleBridge.savePhoneLimits(context(), 120, 30)
+
+        val snapshot = LocalRuleRepository(context()).load()
+        assertEquals(120L * 60_000L, snapshot.globalPolicy.phoneDailyLimitMillis)
+        assertEquals(30L * 60_000L, snapshot.globalPolicy.phoneSessionLimitMillis)
+        assertTrue(snapshot.appPoliciesByIdentity.containsKey("tv.danmaku.bili"))
+    }
+
+    @Test
+    fun savePhoneWhitelistWritesV2CountWhitelist() {
+        V2RuleBridge.savePhoneWhitelist(
+            context(),
+            setOf("com.android.settings", "com.example.reader")
+        )
+
+        val snapshot = LocalRuleRepository(context()).load()
+        assertEquals(
+            setOf("com.android.settings", "com.example.reader"),
+            snapshot.globalPolicy.countWhitelistIdentities
+        )
+    }
+
     private fun context() =
         InstrumentationRegistry.getInstrumentation().targetContext
 }

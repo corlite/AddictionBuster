@@ -157,7 +157,7 @@ public class DiagnosticActivity extends Activity {
         int phoneWhitelistCount = RuleStore.getPhoneWhitelistPackages(this).size();
         int phoneDailyLimit = RuleStore.getPhoneDailyLimitMinutes(this);
         int phoneSessionLimit = RuleStore.getPhoneSessionLimitMinutes(this);
-        long phoneUsedMinutes = RuleStore.getPhoneDailyUsedSeconds(this) / 60L;
+        long phoneUsedMinutes = V2RuleBridge.getPhoneDailyUsedMinutes(this);
         String latestLine = DiagnosticLogger.lastImportantLine(this);
 
         statusView.setText(
@@ -215,7 +215,7 @@ public class DiagnosticActivity extends Activity {
                 + "生效应用：" + RuleStore.getBlockedPackages(this).size() + " 个\n"
                 + "手机时长每日限制：" + limitText(RuleStore.getPhoneDailyLimitMinutes(this)) + "\n"
                 + "手机时长单次限制：" + limitText(RuleStore.getPhoneSessionLimitMinutes(this)) + "\n"
-                + "今日手机已统计：" + (RuleStore.getPhoneDailyUsedSeconds(this) / 60L) + " 分钟\n"
+                + "今日手机已统计：" + V2RuleBridge.getPhoneDailyUsedMinutes(this) + " 分钟\n"
                 + "手机白名单：" + RuleStore.getPhoneWhitelistPackages(this).size() + " 个自选应用\n"
                 + "最近关键事件：" + DiagnosticLogger.lastImportantLine(this) + "\n\n"
                 + "提示：日志可能包含应用名称和包名，用于判断拦截命中的目标。\n\n"

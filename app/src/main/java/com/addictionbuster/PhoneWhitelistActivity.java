@@ -170,6 +170,7 @@ public class PhoneWhitelistActivity extends Activity {
         }
         boolean checked = whitelist.contains(app.packageName);
         RuleStore.savePhoneWhitelistPackages(this, whitelist);
+        V2RuleBridge.savePhoneWhitelist(this, whitelist);
         DiagnosticLogger.log(this, "rule", "phone whitelist toggled package=" + app.packageName
                 + " checked=" + checked);
         renderAppList();

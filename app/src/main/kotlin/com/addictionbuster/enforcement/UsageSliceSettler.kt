@@ -23,7 +23,7 @@ class UsageSliceSettler {
         val app = context.foregroundApp
         if (context.safeZonePolicy.isSafe(app)) return false
         if (app.isSystem || app.isLauncher || app.isEmergencyAllowed) return false
-        val appPolicy = context.ruleSnapshot.requireAppPolicyFor(app.identityKey)
+        val appPolicy = context.ruleSnapshot.appPolicyFor(app.identityKey) ?: return false
         return appPolicy.enabled
     }
 
@@ -34,8 +34,8 @@ class UsageSliceSettler {
         if (context.safeZonePolicy.isSafe(app)) return false
         if (app.isSystem || app.isLauncher || app.isEmergencyAllowed) return false
         if (app.identityKey in context.ruleSnapshot.globalPolicy.countWhitelistIdentities) return false
-        val appPolicy = context.ruleSnapshot.requireAppPolicyFor(app.identityKey)
-        return appPolicy.countTowardsPhoneUsage
+        val appPolicy = context.ruleSnapshot.appPolicyFor(app.identityKey)
+        return appPolicy?.countTowardsPhoneUsage ?: true
     }
 }
 

@@ -53,14 +53,31 @@ class EnforcementEngineTest {
     }
 
     @Test
-    fun missingAppPolicyFailsFastForNonSafeApp() {
+    fun missingAppPolicyAllowsWhenNoGlobalLimitIsExceeded() {
         val context = context(
             ruleSnapshot = rules(appPolicy = null)
         )
 
-        assertThrows(InvalidEnforcementContextException::class.java) {
-            engine.decide(context)
-        }
+        val decision = engine.decide(context)
+
+        assertEquals(EnforcementAction.ALLOW, decision.action)
+        assertEquals(ReasonCode.MISSING_APP_POLICY_ALLOW, decision.reasonCode)
+    }
+
+    @Test
+    fun phoneLimitAppliesWithoutAppPolicy() {
+        val context = context(
+            usageSnapshot = usage(phoneDailyUsedMillis = 60_000L),
+            ruleSnapshot = rules(
+                appPolicy = null,
+                globalPolicy = globalPolicy(phoneDailyLimitMillis = 60_000L)
+            )
+        )
+
+        val decision = engine.decide(context)
+
+        assertEquals(EnforcementAction.SHOW_PHONE_LIMIT_BLOCK, decision.action)
+        assertEquals(ReasonCode.PHONE_TOTAL_LIMIT_BLOCK, decision.reasonCode)
     }
 
     @Test
@@ -166,6 +183,23 @@ class EnforcementEngineTest {
         assertFalse(commit.phoneCounted)
         assertEquals(1_000L, commit.appUsageMillis)
         assertEquals(0L, commit.phoneUsageMillis)
+    }
+
+    @Test
+    fun phoneUsageCountsAppWithoutAppPolicy() {
+        val app = normalApp()
+        val commit = UsageSliceSettler().settle(
+            previousContext = context(
+                app = app,
+                ruleSnapshot = rules(appPolicy = null)
+            ),
+            nowMillis = 2_000L
+        )
+
+        assertFalse(commit.appCounted)
+        assertTrue(commit.phoneCounted)
+        assertEquals(0L, commit.appUsageMillis)
+        assertEquals(1_000L, commit.phoneUsageMillis)
     }
 
     @Test
