@@ -3,13 +3,12 @@ package com.addictionbuster;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.TextUtils;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 public class AppSettingsActivity extends Activity {
@@ -29,59 +28,70 @@ public class AppSettingsActivity extends Activity {
         updateStatus();
     }
 
-    private LinearLayout buildContent() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(22), dp(26), dp(22), dp(18));
-        root.setBackgroundColor(Color.rgb(248, 250, 252));
+    private ScrollView buildContent() {
+        LinearLayout root = UiKit.screen(this);
 
-        TextView title = text("设置", 28, Color.rgb(15, 23, 42), true);
-        root.addView(title, matchWrap());
+        root.addView(UiKit.title(this, "设置"), UiKit.matchWrap());
+        root.addView(UiKit.subtitle(this, "权限、后台媒体阻断和诊断日志都在这里。"), UiKit.matchWrap());
 
-        TextView subtitle = text("权限、后台媒体阻断和诊断日志都在这里。", 15, Color.rgb(71, 85, 105), false);
-        subtitle.setPadding(0, dp(8), 0, dp(18));
-        root.addView(subtitle, matchWrap());
-
-        accessibilityStatusView = text("", 14, Color.rgb(30, 64, 175), false);
-        root.addView(accessibilityStatusView, matchWrap());
-
-        Button accessibilityButton = new Button(this);
-        accessibilityButton.setText("开启无障碍拦截服务");
-        accessibilityButton.setAllCaps(false);
+        LinearLayout requiredCard = UiKit.card(this);
+        requiredCard.addView(UiKit.sectionTitle(this, "必要权限"), UiKit.matchWrap());
+        accessibilityStatusView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
+        addStatusRow(requiredCard, "无障碍拦截服务", accessibilityStatusView);
+        Button accessibilityButton = UiKit.entryButton(this, "开启无障碍拦截服务", "用于识别前台 App 并显示拦截层");
         accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
-        root.addView(accessibilityButton, matchWrap());
+        requiredCard.addView(accessibilityButton, UiKit.spaced(this, 10));
+        root.addView(requiredCard, UiKit.matchWrap());
 
-        mediaStatusView = text("", 14, Color.rgb(30, 64, 175), false);
-        mediaStatusView.setPadding(0, dp(14), 0, 0);
-        root.addView(mediaStatusView, matchWrap());
-
-        Button notificationAccessButton = new Button(this);
-        notificationAccessButton.setText("开启后台媒体阻断");
-        notificationAccessButton.setAllCaps(false);
+        LinearLayout optionalCard = UiKit.card(this);
+        optionalCard.addView(UiKit.sectionTitle(this, "可选能力"), UiKit.matchWrap());
+        mediaStatusView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
+        addStatusRow(optionalCard, "后台媒体阻断", mediaStatusView);
+        Button notificationAccessButton = UiKit.entryButton(this, "开启后台媒体阻断", "尝试暂停受控应用的后台播放声音");
         notificationAccessButton.setOnClickListener(v -> startActivity(new Intent(this, NotificationAccessGuideActivity.class)));
-        root.addView(notificationAccessButton, matchWrap());
+        optionalCard.addView(notificationAccessButton, UiKit.spaced(this, 10));
+        root.addView(optionalCard, UiKit.spaced(this, 12));
 
-        Button diagnosticButton = new Button(this);
-        diagnosticButton.setText("诊断中心");
-        diagnosticButton.setAllCaps(false);
+        LinearLayout diagnosticCard = UiKit.card(this);
+        diagnosticCard.addView(UiKit.sectionTitle(this, "诊断"), UiKit.matchWrap());
+        TextView diagnosticHint = UiKit.hint(this, "复现问题后，在诊断中心复制日志和最近关键事件。");
+        diagnosticHint.setPadding(0, 0, 0, UiKit.dp(this, 8));
+        diagnosticCard.addView(diagnosticHint, UiKit.matchWrap());
+        Button diagnosticButton = UiKit.entryButton(this, "诊断中心", "复制日志、查看最近事件和权限状态");
         diagnosticButton.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticActivity.class)));
-        root.addView(diagnosticButton, matchWrap());
+        diagnosticCard.addView(diagnosticButton, UiKit.matchWrap());
+        root.addView(diagnosticCard, UiKit.spaced(this, 12));
 
         updateStatus();
-        return root;
+        return UiKit.scrollScreen(this, root);
+    }
+
+    private void addStatusRow(LinearLayout parent, String label, TextView valueView) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, UiKit.dp(this, 5), 0, UiKit.dp(this, 5));
+
+        TextView labelView = UiKit.text(this, label, 14, UiKit.COLOR_MUTED, false);
+        row.addView(labelView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        row.addView(valueView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        parent.addView(row, UiKit.matchWrap());
     }
 
     private void updateStatus() {
         boolean accessibilityEnabled = isAccessibilityServiceEnabled();
         if (accessibilityStatusView != null) {
-            accessibilityStatusView.setText(accessibilityEnabled ? "无障碍拦截：已开启" : "无障碍拦截：未开启");
-            accessibilityStatusView.setTextColor(accessibilityEnabled ? Color.rgb(22, 101, 52) : Color.rgb(185, 28, 28));
+            accessibilityStatusView.setText(accessibilityEnabled ? "已开启" : "未开启");
+            accessibilityStatusView.setTextColor(accessibilityEnabled ? UiKit.COLOR_SUCCESS : UiKit.COLOR_DANGER);
         }
 
         boolean mediaEnabled = isNotificationListenerEnabled();
         if (mediaStatusView != null) {
-            mediaStatusView.setText(mediaEnabled ? "后台媒体阻断：已开启" : "后台媒体阻断：未开启");
-            mediaStatusView.setTextColor(mediaEnabled ? Color.rgb(22, 101, 52) : Color.rgb(185, 28, 28));
+            mediaStatusView.setText(mediaEnabled ? "已开启" : "未开启");
+            mediaStatusView.setTextColor(mediaEnabled ? UiKit.COLOR_SUCCESS : UiKit.COLOR_DANGER);
         }
 
         DiagnosticLogger.log(this, "settings", "status accessibilityEnabled=" + accessibilityEnabled + " mediaEnabled=" + mediaEnabled);
@@ -120,25 +130,4 @@ public class AppSettingsActivity extends Activity {
         return false;
     }
 
-    private TextView text(String value, int sp, int color, boolean bold) {
-        TextView textView = new TextView(this);
-        textView.setText(value);
-        textView.setTextSize(sp);
-        textView.setTextColor(color);
-        if (bold) {
-            textView.setTypeface(textView.getTypeface(), android.graphics.Typeface.BOLD);
-        }
-        return textView;
-    }
-
-    private LinearLayout.LayoutParams matchWrap() {
-        return new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
-    }
 }

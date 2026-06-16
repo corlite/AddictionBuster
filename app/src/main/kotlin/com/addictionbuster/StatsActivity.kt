@@ -1,11 +1,8 @@
 package com.addictionbuster
 
 import android.app.Activity
-import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -30,91 +27,86 @@ class StatsActivity : Activity() {
             eventStore = LocalEventStore(this)
         ).dailySnapshot()
 
-        return ScrollView(this).apply {
-            addView(
-                LinearLayout(this@StatsActivity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(22), dp(26), dp(22), dp(18))
-                    setBackgroundColor(Color.rgb(248, 250, 252))
+        val root = UiKit.screen(this).apply {
+            addView(UiKit.title(this@StatsActivity, "今日报告"), UiKit.matchWrap())
+            addView(UiKit.subtitle(this@StatsActivity, snapshot.dateKey), UiKit.matchWrap())
 
-                    addView(text("今日统计", 30, Color.rgb(15, 23, 42), bold = true), matchWrap())
-                    addView(
-                        text(snapshot.dateKey, 14, Color.rgb(100, 116, 139), bold = false).apply {
-                            setPadding(0, dp(6), 0, dp(18))
-                        },
-                        matchWrap()
-                    )
+            addView(summaryCard(snapshot), UiKit.matchWrap())
+            addView(eventCard(snapshot), UiKit.spaced(this@StatsActivity, 12))
+            addView(appUsageCard(snapshot), UiKit.spaced(this@StatsActivity, 12))
+        }
+        return UiKit.scrollScreen(this, root)
+    }
 
-                    addView(sectionTitle("手机时长"), matchWrap())
-                    addView(summaryLine("今日总时长", formatDuration(snapshot.phoneUsage.dailyUsedMillis)), matchWrap())
-                    addView(summaryLine("本次解锁", formatDuration(snapshot.phoneUsage.sessionUsedMillis)), matchWrap())
-                    addView(summaryLine("离线待确认", formatDuration(snapshot.phoneUsage.pendingOfflineGapMillis)), matchWrap())
+    private fun summaryCard(snapshot: DailyStatsSnapshot): LinearLayout =
+        UiKit.card(this).apply {
+            addView(UiKit.sectionTitle(this@StatsActivity, "总览"), UiKit.matchWrap())
+            UiKit.addInfoRow(this, "手机使用", formatDuration(snapshot.phoneUsage.dailyUsedMillis))
+            UiKit.addInfoRow(this, "本次解锁", formatDuration(snapshot.phoneUsage.sessionUsedMillis))
+            UiKit.addInfoRow(this, "拦截事件", "${snapshot.eventStats.blockEvents} 次")
+            UiKit.addInfoRow(this, "离线待确认", formatDuration(snapshot.phoneUsage.pendingOfflineGapMillis))
+        }
 
-                    addView(sectionTitle("事件"), spacedParams(top = 18))
-                    addView(summaryLine("总事件", "${snapshot.eventStats.totalEvents} 次"), matchWrap())
-                    addView(summaryLine("拦截事件", "${snapshot.eventStats.blockEvents} 次"), matchWrap())
-                    addView(summaryLine("双开相关", "${snapshot.eventStats.cloneEvents} 次"), matchWrap())
-                    addView(summaryLine("权限异常", "${snapshot.eventStats.permissionAbnormalEvents} 次"), matchWrap())
-                    addView(
-                        summaryLine(
-                            "离线间隙",
-                            "${snapshot.eventStats.offlineGapEvents} 次 / ${formatDuration(snapshot.eventStats.offlineGapMillis)}"
-                        ),
-                        matchWrap()
-                    )
-
-                    addView(sectionTitle("App 用量"), spacedParams(top = 18))
-                    addAppUsageList(snapshot)
-                },
-                matchWrap()
+    private fun eventCard(snapshot: DailyStatsSnapshot): LinearLayout =
+        UiKit.card(this).apply {
+            addView(UiKit.sectionTitle(this@StatsActivity, "事件明细"), UiKit.matchWrap())
+            UiKit.addInfoRow(this, "总事件", "${snapshot.eventStats.totalEvents} 次")
+            UiKit.addInfoRow(this, "双开相关", "${snapshot.eventStats.cloneEvents} 次")
+            UiKit.addInfoRow(this, "权限异常", "${snapshot.eventStats.permissionAbnormalEvents} 次")
+            UiKit.addInfoRow(
+                this,
+                "离线间隙",
+                "${snapshot.eventStats.offlineGapEvents} 次 / ${formatDuration(snapshot.eventStats.offlineGapMillis)}"
             )
         }
-    }
+
+    private fun appUsageCard(snapshot: DailyStatsSnapshot): LinearLayout =
+        UiKit.card(this).apply {
+            addView(UiKit.sectionTitle(this@StatsActivity, "App 用量"), UiKit.matchWrap())
+            addAppUsageList(snapshot)
+        }
 
     private fun LinearLayout.addAppUsageList(snapshot: DailyStatsSnapshot) {
         if (snapshot.appUsages.isEmpty()) {
             addView(
-                text("今天还没有 v2 App 使用记录。", 14, Color.rgb(100, 116, 139), bold = false).apply {
+                UiKit.hint(this@StatsActivity, "今天还没有统计记录。打开受控应用或设置手机时长后，这里会显示今日报告。").apply {
                     gravity = Gravity.CENTER
-                    setPadding(0, dp(10), 0, 0)
+                    setPadding(0, UiKit.dp(this@StatsActivity, 10), 0, 0)
                 },
-                matchWrap()
+                UiKit.matchWrap()
             )
             return
         }
 
         snapshot.appUsages.forEach { usage ->
-            addView(appUsageRow(usage), spacedParams(top = 8))
+            addView(appUsageRow(usage), UiKit.spaced(this@StatsActivity, 8))
         }
     }
 
     private fun appUsageRow(usage: AppUsageStats): LinearLayout =
         LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(8), 0, dp(8))
+            setPadding(0, UiKit.dp(this@StatsActivity, 8), 0, UiKit.dp(this@StatsActivity, 8))
 
-            addView(text(appLabel(usage.identityKey), 16, Color.rgb(15, 23, 42), bold = true), matchWrap())
+            addView(UiKit.text(this@StatsActivity, appLabel(usage.identityKey), 16, UiKit.COLOR_TEXT, true), UiKit.matchWrap())
             addView(
-                text(usage.identityKey, 12, Color.rgb(100, 116, 139), bold = false).apply {
-                    setPadding(0, dp(2), 0, dp(6))
+                UiKit.hint(this@StatsActivity, usage.identityKey).apply {
+                    setPadding(0, UiKit.dp(this@StatsActivity, 2), 0, UiKit.dp(this@StatsActivity, 6))
                 },
-                matchWrap()
+                UiKit.matchWrap()
             )
-            addView(summaryLine("今日使用", formatDuration(usage.usedMillis)), matchWrap())
-            addView(summaryLine("本次使用", formatDuration(usage.sessionUsedMillis)), matchWrap())
-            addView(summaryLine("连续使用", formatDuration(usage.continuousUsedMillis)), matchWrap())
-            addView(summaryLine("打开次数", "${usage.openCount} 次"), matchWrap())
+            addView(summaryLine("今日使用", formatDuration(usage.usedMillis)), UiKit.matchWrap())
+            addView(summaryLine("本次使用", formatDuration(usage.sessionUsedMillis)), UiKit.matchWrap())
+            addView(summaryLine("连续使用", formatDuration(usage.continuousUsedMillis)), UiKit.matchWrap())
+            addView(summaryLine("打开次数", "${usage.openCount} 次"), UiKit.matchWrap())
             if (usage.pendingOfflineGapMillis > 0L) {
-                addView(summaryLine("离线待确认", formatDuration(usage.pendingOfflineGapMillis)), matchWrap())
+                addView(summaryLine("离线待确认", formatDuration(usage.pendingOfflineGapMillis)), UiKit.matchWrap())
             }
         }
 
-    private fun sectionTitle(value: String): TextView =
-        text(value, 19, Color.rgb(15, 23, 42), bold = true)
-
     private fun summaryLine(label: String, value: String): TextView =
-        text("$label：$value", 15, Color.rgb(51, 65, 85), bold = false).apply {
-            setPadding(0, dp(4), 0, dp(4))
+        UiKit.body(this, "$label：$value").apply {
+            setPadding(0, UiKit.dp(this@StatsActivity, 3), 0, UiKit.dp(this@StatsActivity, 3))
         }
 
     private fun appLabel(identityKey: String): String =
@@ -132,27 +124,4 @@ class StatsActivity : Activity() {
         }
     }
 
-    private fun text(value: String, sp: Int, color: Int, bold: Boolean): TextView =
-        TextView(this).apply {
-            text = value
-            textSize = sp.toFloat()
-            setTextColor(color)
-            if (bold) {
-                setTypeface(typeface, Typeface.BOLD)
-            }
-        }
-
-    private fun matchWrap(): LinearLayout.LayoutParams =
-        LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-
-    private fun spacedParams(top: Int): LinearLayout.LayoutParams =
-        matchWrap().apply {
-            setMargins(0, dp(top), 0, 0)
-        }
-
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).toInt()
 }

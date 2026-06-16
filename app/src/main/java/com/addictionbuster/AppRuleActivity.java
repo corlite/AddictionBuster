@@ -3,7 +3,6 @@ package com.addictionbuster;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
@@ -58,45 +57,40 @@ public class AppRuleActivity extends Activity {
     }
 
     private ScrollView buildContent() {
-        ScrollView scrollView = new ScrollView(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(22), dp(26), dp(22), dp(18));
-        root.setBackgroundColor(Color.rgb(248, 250, 252));
-        scrollView.addView(root);
+        LinearLayout root = UiKit.screen(this);
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView eyebrow = text("拦截规则", 30, Color.rgb(15, 23, 42), true);
+        TextView eyebrow = UiKit.title(this, "拦截规则");
         header.addView(eyebrow, new LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
         ));
 
-        TextView saveLink = text("保存", 18, Color.rgb(37, 99, 235), true);
+        TextView saveLink = UiKit.text(this, "保存", 18, UiKit.COLOR_PRIMARY, true);
         saveLink.setGravity(Gravity.CENTER);
-        saveLink.setPadding(dp(12), dp(6), 0, dp(6));
+        saveLink.setPadding(UiKit.dp(this, 12), UiKit.dp(this, 6), 0, UiKit.dp(this, 6));
         saveLink.setOnClickListener(v -> saveRule());
         header.addView(saveLink, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         ));
-        root.addView(header, matchWrap());
+        root.addView(header, UiKit.matchWrap());
 
-        TextView title = text(label, 20, Color.rgb(15, 23, 42), true);
-        title.setPadding(0, dp(8), 0, 0);
-        root.addView(title, matchWrap());
+        TextView title = UiKit.text(this, label, 20, UiKit.COLOR_TEXT, true);
+        title.setPadding(0, UiKit.dp(this, 8), 0, 0);
+        root.addView(title, UiKit.matchWrap());
 
-        TextView packageView = text(packageName, 13, Color.rgb(100, 116, 139), false);
-        packageView.setPadding(0, dp(4), 0, dp(16));
-        root.addView(packageView, matchWrap());
+        TextView packageView = UiKit.hint(this, packageName);
+        packageView.setPadding(0, UiKit.dp(this, 4), 0, UiKit.dp(this, 16));
+        root.addView(packageView, UiKit.matchWrap());
 
         LinearLayout permissionGuide = permissionGuide();
         if (permissionGuide != null) {
-            root.addView(permissionGuide, matchWrap());
+            root.addView(permissionGuide, UiKit.matchWrap());
         }
 
         AppRule rule = RuleStore.getAppRule(this, packageName);
@@ -108,32 +102,45 @@ public class AppRuleActivity extends Activity {
         hiddenSecondsInput = numberInput(rule.hiddenSeconds);
         confirmTextInput = textInput(rule.confirmText);
 
-        root.addView(field("每日额度（分钟）", "一天内最多允许使用多久，0 表示暂不限制。", dailyQuotaInput), matchWrap());
-        root.addView(field("本次使用上限（分钟）", "挑战完成后单次最多放行多久。", sessionLimitInput), matchWrap());
-        root.addView(field("等待倒计时（秒）", "打开被拦截应用前先等多久。", waitSecondsInput), matchWrap());
-        root.addView(field("互动点击次数", "倒计时后还需要追着按钮点几次，0 表示不启用。", requiredTapsInput), matchWrap());
-        root.addView(field("按钮隐藏次数", "互动过程中按钮随机隐藏几次，0 表示不隐藏。", hiddenCountInput), matchWrap());
-        root.addView(field("每次隐藏时长（秒）", "按钮隐藏后多久再出现。", hiddenSecondsInput), matchWrap());
-        root.addView(field("文字确认", "例如输入“我选择继续”。留空表示不需要文字确认。", confirmTextInput), matchWrap());
+        LinearLayout quotaCard = UiKit.card(this);
+        quotaCard.addView(UiKit.sectionTitle(this, "使用额度"), UiKit.matchWrap());
+        quotaCard.addView(field("每日额度（分钟）", "一天内最多允许使用多久，0 表示暂不限制。", dailyQuotaInput), UiKit.matchWrap());
+        quotaCard.addView(field("本次使用上限（分钟）", "挑战完成后单次最多放行多久。", sessionLimitInput), UiKit.matchWrap());
+        root.addView(quotaCard, UiKit.matchWrap());
 
-        Button saveButton = new Button(this);
-        saveButton.setText("保存规则");
-        saveButton.setAllCaps(false);
+        LinearLayout challengeCard = UiKit.card(this);
+        challengeCard.addView(UiKit.sectionTitle(this, "挑战设置"), UiKit.matchWrap());
+        challengeCard.addView(field("等待倒计时（秒）", "打开被拦截应用前先等多久。", waitSecondsInput), UiKit.matchWrap());
+        challengeCard.addView(field("互动点击次数", "倒计时后还需要追着按钮点几次，0 表示不启用。", requiredTapsInput), UiKit.matchWrap());
+        challengeCard.addView(field("按钮隐藏次数", "互动过程中按钮随机隐藏几次，0 表示不隐藏。", hiddenCountInput), UiKit.matchWrap());
+        challengeCard.addView(field("每次隐藏时长（秒）", "按钮隐藏后多久再出现。", hiddenSecondsInput), UiKit.matchWrap());
+        root.addView(challengeCard, UiKit.spaced(this, 12));
+
+        LinearLayout confirmCard = UiKit.card(this);
+        confirmCard.addView(UiKit.sectionTitle(this, "文字确认"), UiKit.matchWrap());
+        confirmCard.addView(field("确认文字", "例如输入“我选择继续”。留空表示不需要文字确认。", confirmTextInput), UiKit.matchWrap());
+        root.addView(confirmCard, UiKit.spaced(this, 12));
+
+        Button saveButton = UiKit.primaryButton(this, "保存规则");
         saveButton.setOnClickListener(v -> saveRule());
-        root.addView(saveButton, matchWrap());
+        root.addView(saveButton, UiKit.spaced(this, 16));
 
-        Button disableButton = new Button(this);
-        disableButton.setText("停用这个应用拦截");
-        disableButton.setAllCaps(false);
+        LinearLayout dangerCard = UiKit.card(this);
+        dangerCard.addView(UiKit.sectionTitle(this, "危险操作"), UiKit.matchWrap());
+        TextView dangerHint = UiKit.hint(this, "停用后，这个应用会从已管控应用中移除。");
+        dangerHint.setPadding(0, 0, 0, UiKit.dp(this, 8));
+        dangerCard.addView(dangerHint, UiKit.matchWrap());
+        Button disableButton = UiKit.dangerButton(this, "停用这个应用拦截");
         disableButton.setOnClickListener(v -> disableRule());
-        root.addView(disableButton, matchWrap());
+        dangerCard.addView(disableButton, UiKit.matchWrap());
+        root.addView(dangerCard, UiKit.spaced(this, 16));
 
-        TextView hint = text("保存后，这个应用会继续出现在“生效应用”里。下一次打开它时，新规则会参与拦截。", 13, Color.rgb(100, 116, 139), false);
+        TextView hint = UiKit.hint(this, "保存后，下一次打开它时，新规则会参与拦截。");
         hint.setGravity(Gravity.CENTER);
-        hint.setPadding(0, dp(16), 0, 0);
-        root.addView(hint, matchWrap());
+        hint.setPadding(0, UiKit.dp(this, 16), 0, 0);
+        root.addView(hint, UiKit.matchWrap());
 
-        return scrollView;
+        return UiKit.scrollScreen(this, root);
     }
 
     private LinearLayout permissionGuide() {
@@ -143,58 +150,50 @@ public class AppRuleActivity extends Activity {
             return null;
         }
 
-        LinearLayout guide = new LinearLayout(this);
-        guide.setOrientation(LinearLayout.VERTICAL);
-        guide.setPadding(dp(12), dp(10), dp(12), dp(12));
+        LinearLayout guide = UiKit.card(this);
 
-        TextView title = text("首次使用前先开启权限", 17, Color.rgb(185, 28, 28), true);
-        guide.addView(title, matchWrap());
+        TextView title = UiKit.text(this, "首次使用前先开启权限", 17, UiKit.COLOR_DANGER, true);
+        guide.addView(title, UiKit.matchWrap());
 
-        TextView body = text(
+        TextView body = UiKit.body(
+                this,
                 "必需：开启无障碍拦截服务，才能识别并拦截前台 App。\n"
-                        + "可选：开启后台媒体阻断，才能尝试暂停后台播放声音。",
-                14,
-                Color.rgb(51, 65, 85),
-                false
+                        + "可选：开启后台媒体阻断，才能尝试暂停后台播放声音。"
         );
-        body.setPadding(0, dp(6), 0, dp(8));
-        guide.addView(body, matchWrap());
+        body.setPadding(0, UiKit.dp(this, 6), 0, UiKit.dp(this, 8));
+        guide.addView(body, UiKit.matchWrap());
 
         if (!accessibilityEnabled) {
-            Button accessibilityButton = new Button(this);
-            accessibilityButton.setText("去开启无障碍拦截服务");
-            accessibilityButton.setAllCaps(false);
+            Button accessibilityButton = UiKit.entryButton(this, "去开启无障碍拦截服务", "系统设置里打开服务开关");
             accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
-            guide.addView(accessibilityButton, matchWrap());
+            guide.addView(accessibilityButton, UiKit.matchWrap());
         }
 
         if (!mediaEnabled) {
-            Button mediaButton = new Button(this);
-            mediaButton.setText("了解后台媒体阻断权限");
-            mediaButton.setAllCaps(false);
+            Button mediaButton = UiKit.entryButton(this, "了解后台媒体阻断权限", "可选，用于暂停后台播放声音");
             mediaButton.setOnClickListener(v -> startActivity(new Intent(this, NotificationAccessGuideActivity.class)));
-            guide.addView(mediaButton, matchWrap());
+            guide.addView(mediaButton, UiKit.spaced(this, 8));
         }
 
-        TextView hint = text("规则可以先保存；权限开启后，下一次打开这个应用才会真正拦截。", 13, Color.rgb(100, 116, 139), false);
-        hint.setPadding(0, dp(6), 0, 0);
-        guide.addView(hint, matchWrap());
+        TextView hint = UiKit.hint(this, "规则可以先保存；权限开启后，下一次打开这个应用才会真正拦截。");
+        hint.setPadding(0, UiKit.dp(this, 8), 0, 0);
+        guide.addView(hint, UiKit.matchWrap());
         return guide;
     }
 
     private LinearLayout field(String title, String hint, EditText input) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(0, dp(7), 0, dp(11));
+        box.setPadding(0, UiKit.dp(this, 7), 0, UiKit.dp(this, 11));
 
-        TextView titleView = text(title, 16, Color.rgb(15, 23, 42), true);
-        box.addView(titleView, matchWrap());
+        TextView titleView = UiKit.text(this, title, 15, UiKit.COLOR_TEXT, true);
+        box.addView(titleView, UiKit.matchWrap());
 
-        TextView hintView = text(hint, 13, Color.rgb(100, 116, 139), false);
-        hintView.setPadding(0, dp(3), 0, dp(5));
-        box.addView(hintView, matchWrap());
+        TextView hintView = UiKit.hint(this, hint);
+        hintView.setPadding(0, UiKit.dp(this, 3), 0, UiKit.dp(this, 5));
+        box.addView(hintView, UiKit.matchWrap());
 
-        box.addView(input, matchWrap());
+        box.addView(input, UiKit.matchWrap());
         return box;
     }
 
@@ -204,6 +203,7 @@ public class AppRuleActivity extends Activity {
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setText(String.valueOf(value));
         input.setTextSize(16);
+        input.setPadding(UiKit.dp(this, 8), 0, UiKit.dp(this, 8), 0);
         return input;
     }
 
@@ -213,6 +213,7 @@ public class AppRuleActivity extends Activity {
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setText(value);
         input.setTextSize(16);
+        input.setPadding(UiKit.dp(this, 8), 0, UiKit.dp(this, 8), 0);
         return input;
     }
 

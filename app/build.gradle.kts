@@ -11,8 +11,8 @@ android {
         applicationId = "com.addictionbuster.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "0.2.6"
+        versionCode = 27
+        versionName = "0.2.7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

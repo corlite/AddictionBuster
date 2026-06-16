@@ -14,9 +14,9 @@ class StatsActivityInstrumentedTest {
             scenario.onActivity { activity ->
                 val content = activity.window.decorView
 
-                assertTrue(content.containsText("今日统计"))
-                assertTrue(content.containsText("手机时长"))
-                assertTrue(content.containsText("事件"))
+                assertTrue(content.containsText("今日报告"))
+                assertTrue(content.containsText("总览"))
+                assertTrue(content.containsText("事件明细"))
                 assertTrue(content.containsText("App 用量"))
             }
         }
