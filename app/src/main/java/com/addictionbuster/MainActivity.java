@@ -69,6 +69,12 @@ public class MainActivity extends Activity {
         phoneLimitParams.setMargins(0, 0, 0, dp(14));
         root.addView(phoneLimitButton, phoneLimitParams);
 
+        Button statsButton = homeButton("统计", "查看今日时长、拦截事件和离线待确认");
+        statsButton.setOnClickListener(v -> startActivity(new Intent(this, StatsActivity.class)));
+        LinearLayout.LayoutParams statsParams = matchWrap();
+        statsParams.setMargins(0, 0, 0, dp(14));
+        root.addView(statsButton, statsParams);
+
         Button settingsButton = homeButton("设置", "开启权限、查看诊断日志");
         settingsButton.setOnClickListener(v -> startActivity(new Intent(this, AppSettingsActivity.class)));
         root.addView(settingsButton, matchWrap());

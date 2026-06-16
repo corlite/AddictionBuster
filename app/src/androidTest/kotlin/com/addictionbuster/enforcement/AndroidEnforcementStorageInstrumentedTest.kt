@@ -8,6 +8,7 @@ import com.addictionbuster.enforcement.storage.LocalRuleRepository
 import com.addictionbuster.enforcement.storage.LocalSetupStateRepository
 import com.addictionbuster.enforcement.storage.LocalStateRepository
 import com.addictionbuster.enforcement.storage.PersistentRuntimeState
+import com.addictionbuster.enforcement.stats.EnforcementStatsAggregator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -122,6 +123,54 @@ class AndroidEnforcementStorageInstrumentedTest {
         repository.markSetupCompleted(completedAtMillis = 1234L)
 
         assertTrue(LocalSetupStateRepository(context()).isSetupCompleted())
+    }
+
+    @Test
+    fun testDailyStatsAggregatesUsageAndEvents() {
+        val appRepository = LocalAppUsageRepository(context())
+        val phoneRepository = LocalPhoneUsageRepository(context())
+        val eventStore = LocalEventStore(context())
+
+        appRepository.addUsage("com.example.reader", 125_000L, dateKey = "2026-06-16")
+        appRepository.incrementOpen("com.example.reader", 1000L, dateKey = "2026-06-16")
+        appRepository.markOfflineGapPending("com.example.reader", 30_000L, dateKey = "2026-06-16")
+        phoneRepository.addUsage(240_000L, dateKey = "2026-06-16")
+        phoneRepository.markOfflineGapPending(60_000L, dateKey = "2026-06-16")
+        eventStore.append(
+            eventType = EnforcementEventType.DECISION_RECORDED,
+            occurredAtMillis = 1_781_596_800_000L,
+            foregroundIdentityKey = "com.example.reader",
+            rawPackageName = "com.example.reader",
+            screenState = ScreenState.UNLOCKED,
+            bootMarker = "boot-a",
+            details = mapOf("reasonCode" to ReasonCode.APP_SESSION_LIMIT_BLOCK.name)
+        )
+        eventStore.append(
+            eventType = EnforcementEventType.OFFLINE_GAP_DETECTED,
+            occurredAtMillis = 1_781_596_801_000L,
+            foregroundIdentityKey = "com.example.reader",
+            rawPackageName = "com.example.reader",
+            screenState = ScreenState.UNLOCKED,
+            bootMarker = "boot-a",
+            details = mapOf("durationMillis" to "60000")
+        )
+
+        val snapshot = EnforcementStatsAggregator(
+            appUsageRepository = appRepository,
+            phoneUsageRepository = phoneRepository,
+            eventStore = eventStore
+        ).dailySnapshot(dateKey = "2026-06-16")
+
+        assertEquals(240_000L, snapshot.phoneUsage.dailyUsedMillis)
+        assertEquals(60_000L, snapshot.phoneUsage.pendingOfflineGapMillis)
+        assertEquals(1, snapshot.appUsages.size)
+        assertEquals("com.example.reader", snapshot.appUsages.first().identityKey)
+        assertEquals(125_000L, snapshot.appUsages.first().usedMillis)
+        assertEquals(1, snapshot.appUsages.first().openCount)
+        assertEquals(2, snapshot.eventStats.totalEvents)
+        assertEquals(1, snapshot.eventStats.blockEvents)
+        assertEquals(1, snapshot.eventStats.offlineGapEvents)
+        assertEquals(60_000L, snapshot.eventStats.offlineGapMillis)
     }
 
     private fun context() =
