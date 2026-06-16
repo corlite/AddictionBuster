@@ -30,7 +30,10 @@ class EnforcementExecutor(
 
         return when (decision.action) {
             EnforcementAction.ALLOW,
-            EnforcementAction.NO_OP -> EnforcementExecutionResult.NoAction(decision)
+            EnforcementAction.NO_OP -> {
+                overlayController.removeAll()
+                EnforcementExecutionResult.NoAction(decision)
+            }
 
             EnforcementAction.SHOW_APP_CHALLENGE,
             EnforcementAction.SHOW_APP_LIMIT_BLOCK,
@@ -53,6 +56,9 @@ class EnforcementExecutor(
         decision: EnforcementDecision,
         context: EnforcementContext
     ): EnforcementExecutionResult {
+        if (context.activeOverlayType == decision.overlayType) {
+            return EnforcementExecutionResult.NoAction(decision)
+        }
         if (!overlayPermissionChecker.canShowOverlay()) {
             notifier.notifyFatalIssues(setOf(SystemHealthIssue.OVERLAY_PERMISSION_MISSING))
             return performLimitedHome(

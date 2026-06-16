@@ -168,6 +168,33 @@ class EnforcementEngineTest {
         assertEquals(0L, commit.phoneUsageMillis)
     }
 
+    @Test
+    fun expiredActivePassReturnsToChallengeWhenDailyLimitHasRemainingQuota() {
+        val app = normalApp()
+        val context = context(
+            nowMillis = 10_000L,
+            app = app,
+            ruleSnapshot = rules(
+                appPolicy = appPolicy(
+                    identityKey = app.identityKey,
+                    challengeEnabled = true,
+                    dailyLimitMillis = 300L * 60_000L,
+                    passthroughMillis = 10L * 60_000L
+                )
+            ),
+            usageSnapshot = usage(
+                appDailyUsedMillis = 10L * 60_000L,
+                appSessionUsedMillis = 10L * 60_000L
+            ),
+            activePass = ActivePass(app.identityKey, untilMillis = 9_000L)
+        )
+
+        val decision = engine.decide(context)
+
+        assertEquals(EnforcementAction.SHOW_APP_CHALLENGE, decision.action)
+        assertEquals(ReasonCode.APP_CHALLENGE_REQUIRED, decision.reasonCode)
+    }
+
     private fun context(
         nowMillis: Long = 1_000L,
         app: AppIdentity = normalApp(),
@@ -279,7 +306,8 @@ class EnforcementEngineTest {
     private fun appPolicy(
         identityKey: String,
         challengeEnabled: Boolean = false,
-        dailyLimitMillis: Long = 0L
+        dailyLimitMillis: Long = 0L,
+        passthroughMillis: Long = 0L
     ): AppPolicy =
         AppPolicy(
             identityKey = identityKey,
@@ -290,7 +318,12 @@ class EnforcementEngineTest {
             continuousUseLimitMillis = 0L,
             restRequiredMillis = 0L,
             dailyOpenLimit = 0,
-            passthroughMillis = 0L,
+            passthroughMillis = passthroughMillis,
+            challengeWaitMillis = 0L,
+            challengeRequiredTaps = 0,
+            challengeHiddenCount = 0,
+            challengeHiddenMillis = 0L,
+            challengeConfirmText = "",
             cooldownAfterUseMillis = 0L,
             cooldownAfterQuitMillis = 0L,
             countTowardsPhoneUsage = true
@@ -309,11 +342,12 @@ class EnforcementEngineTest {
 
     private fun usage(
         appDailyUsedMillis: Long = 0L,
+        appSessionUsedMillis: Long = 0L,
         phoneDailyUsedMillis: Long = 0L
     ): UsageSnapshot =
         UsageSnapshot(
             appDailyUsedMillis = appDailyUsedMillis,
-            appSessionUsedMillis = 0L,
+            appSessionUsedMillis = appSessionUsedMillis,
             appContinuousUsedMillis = 0L,
             appDailyOpenCount = 0,
             phoneDailyUsedMillis = phoneDailyUsedMillis,

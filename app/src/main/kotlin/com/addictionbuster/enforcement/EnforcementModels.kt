@@ -299,6 +299,11 @@ data class AppPolicy(
     val restRequiredMillis: Long,
     val dailyOpenLimit: Int,
     val passthroughMillis: Long,
+    val challengeWaitMillis: Long,
+    val challengeRequiredTaps: Int,
+    val challengeHiddenCount: Int,
+    val challengeHiddenMillis: Long,
+    val challengeConfirmText: String,
     val cooldownAfterUseMillis: Long,
     val cooldownAfterQuitMillis: Long,
     val countTowardsPhoneUsage: Boolean
@@ -311,6 +316,10 @@ data class AppPolicy(
         requireNonNegative(restRequiredMillis, "restRequiredMillis")
         requireNonNegative(dailyOpenLimit, "dailyOpenLimit")
         requireNonNegative(passthroughMillis, "passthroughMillis")
+        requireNonNegative(challengeWaitMillis, "challengeWaitMillis")
+        requireNonNegative(challengeRequiredTaps, "challengeRequiredTaps")
+        requireNonNegative(challengeHiddenCount, "challengeHiddenCount")
+        requireNonNegative(challengeHiddenMillis, "challengeHiddenMillis")
         requireNonNegative(cooldownAfterUseMillis, "cooldownAfterUseMillis")
         requireNonNegative(cooldownAfterQuitMillis, "cooldownAfterQuitMillis")
         if (enabled && !hasAnyRule()) {

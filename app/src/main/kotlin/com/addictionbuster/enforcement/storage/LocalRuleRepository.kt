@@ -125,6 +125,11 @@ private fun AppPolicy.toJson(): JSONObject =
         .put("restRequiredMillis", restRequiredMillis)
         .put("dailyOpenLimit", dailyOpenLimit)
         .put("passthroughMillis", passthroughMillis)
+        .put("challengeWaitMillis", challengeWaitMillis)
+        .put("challengeRequiredTaps", challengeRequiredTaps)
+        .put("challengeHiddenCount", challengeHiddenCount)
+        .put("challengeHiddenMillis", challengeHiddenMillis)
+        .put("challengeConfirmText", challengeConfirmText)
         .put("cooldownAfterUseMillis", cooldownAfterUseMillis)
         .put("cooldownAfterQuitMillis", cooldownAfterQuitMillis)
         .put("countTowardsPhoneUsage", countTowardsPhoneUsage)
@@ -140,6 +145,11 @@ private fun JSONObject.toAppPolicy(): AppPolicy =
         restRequiredMillis = getLong("restRequiredMillis"),
         dailyOpenLimit = getInt("dailyOpenLimit"),
         passthroughMillis = getLong("passthroughMillis"),
+        challengeWaitMillis = getLong("challengeWaitMillis"),
+        challengeRequiredTaps = getInt("challengeRequiredTaps"),
+        challengeHiddenCount = getInt("challengeHiddenCount"),
+        challengeHiddenMillis = getLong("challengeHiddenMillis"),
+        challengeConfirmText = getString("challengeConfirmText"),
         cooldownAfterUseMillis = getLong("cooldownAfterUseMillis"),
         cooldownAfterQuitMillis = getLong("cooldownAfterQuitMillis"),
         countTowardsPhoneUsage = getBoolean("countTowardsPhoneUsage")

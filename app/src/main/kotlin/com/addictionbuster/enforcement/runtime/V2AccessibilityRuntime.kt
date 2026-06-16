@@ -112,7 +112,8 @@ object V2AccessibilityRuntime {
         val queue: SingleThreadEnforcementQueue,
         val executor: RuntimeExecutor,
         private val decisionEventRecorder: DecisionEventRecorder,
-        private val bootMarker: String
+        private val bootMarker: String,
+        private val overlayState: RuntimeOverlayState
     ) {
         private var lastContext: EnforcementContext? = null
 
@@ -129,6 +130,14 @@ object V2AccessibilityRuntime {
 
         suspend fun processEvent(event: AccessibilityEvent, packageName: String) {
             val nowMillis = System.currentTimeMillis()
+            if (isOwnOverlayWindowEvent(event, packageName)) {
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "ignored own overlay window event type=${event.eventType} class=${event.className ?: ""} activeOverlay=${overlayState.activeOverlayType}"
+                )
+                return
+            }
             val identity = identityResolver.resolve(packageName)
             V2DiagnosticBridge.log(
                 service,
@@ -143,7 +152,7 @@ object V2AccessibilityRuntime {
                     "v2",
                     "rules unavailable package=$packageName identity=${identity.identityKey} error=${throwable.message}"
                 )
-                handleMissingRules(identity, nowMillis)
+                handleUnavailableRules(identity, nowMillis)
                 return
             }
             V2DiagnosticBridge.log(
@@ -172,14 +181,29 @@ object V2AccessibilityRuntime {
                 "decision package=$packageName action=${result.decision.action} reason=${result.decision.reasonCode} overlay=${result.decision.overlayType} fatal=${currentContext.systemHealthState.fatalIssues}"
             )
             val executionResult = executor.execute(result.decision, currentContext)
+            overlayState.activeOverlayType = overlayTypeAfter(
+                executionResult = executionResult,
+                previousOverlayType = overlayState.activeOverlayType
+            )
             V2DiagnosticBridge.log(
                 service,
                 "v2",
                 "execution package=$packageName result=${executionResult.logName()} action=${executionResult.decision.action}"
             )
-            decisionEventRecorder.record(currentContext, result.decision, bootMarker)
-            stateRepository.save(currentContext.toPersistentState(bootMarker))
-            lastContext = currentContext
+            val nextSliceContext = currentContext.copy(
+                activeOverlayType = overlayState.activeOverlayType,
+                sliceStartedAtMillis = nowMillis
+            )
+            decisionEventRecorder.record(nextSliceContext, result.decision, bootMarker)
+            stateRepository.save(nextSliceContext.toPersistentState(bootMarker))
+            lastContext = nextSliceContext
+        }
+
+        private fun isOwnOverlayWindowEvent(event: AccessibilityEvent, packageName: String): Boolean {
+            if (overlayState.activeOverlayType == OverlayType.NONE) return false
+            if (packageName != service.packageName) return false
+            val className = event.className?.toString().orEmpty()
+            return className.isBlank() || !className.startsWith(service.packageName)
         }
 
         private fun buildContext(
@@ -217,7 +241,7 @@ object V2AccessibilityRuntime {
                 currentPage = pageState.pageSnapshot,
                 pageContextMissingSinceMillis = pageState.missingSinceMillis,
                 screenState = ScreenState.UNLOCKED,
-                activeOverlayType = OverlayType.NONE,
+                activeOverlayType = overlayState.activeOverlayType,
                 foregroundStartedAtMillis = if (foregroundChanged) {
                     nowMillis
                 } else {
@@ -245,9 +269,27 @@ object V2AccessibilityRuntime {
             )
         }
 
-        private fun handleMissingRules(identity: AppIdentity, nowMillis: Long) {
+        private fun handleUnavailableRules(identity: AppIdentity, nowMillis: Long) {
             val safeZonePolicy = AndroidSafeZonePolicyFactory.create(service)
-            if (safeZonePolicy.isSafe(identity) || setupStateRepository.isSetupCompleted()) {
+            if (safeZonePolicy.isSafe(identity)) {
+                stateRepository.save(
+                    PersistentRuntimeState(
+                        lastEventTimeMillis = nowMillis,
+                        lastForegroundIdentityKey = identity.identityKey,
+                        lastRawPackageName = identity.rawPackageName,
+                        lastScreenState = ScreenState.UNLOCKED,
+                        bootMarker = bootMarker
+                    )
+                )
+                return
+            }
+            if (setupStateRepository.isSetupCompleted()) {
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "rules unavailable fail-closed-home package=${identity.rawPackageName}"
+                )
+                AccessibilityHomeActionPerformer(service).performHome()
                 stateRepository.save(
                     PersistentRuntimeState(
                         lastEventTimeMillis = nowMillis,
@@ -292,7 +334,10 @@ object V2AccessibilityRuntime {
                 val stateRepository = LocalStateRepository(service)
                 val commitWriter = UsageCommitWriter(appUsageRepository, phoneUsageRepository)
                 val passRepository = LocalPassRepository(service)
-                val runtimeExecutor = RuntimeExecutor(service, passRepository)
+                val overlayState = RuntimeOverlayState()
+                passRepository.clear()
+                V2DiagnosticBridge.log(service, "v2", "cleared active pass on runtime create")
+                val runtimeExecutor = RuntimeExecutor(service, passRepository, overlayState)
                 return RuntimeHolder(
                     service = service,
                     ruleRepository = LocalRuleRepository(service),
@@ -315,17 +360,37 @@ object V2AccessibilityRuntime {
                     ),
                     executor = runtimeExecutor,
                     decisionEventRecorder = DecisionEventRecorder(eventStore),
-                    bootMarker = stateRepository.newBootMarker()
+                    bootMarker = stateRepository.newBootMarker(),
+                    overlayState = overlayState
                 )
             }
         }
+
+        private fun overlayTypeAfter(
+            executionResult: EnforcementExecutionResult,
+            previousOverlayType: OverlayType
+        ): OverlayType =
+            when (executionResult) {
+                is EnforcementExecutionResult.OverlayShown -> executionResult.decision.overlayType
+                is EnforcementExecutionResult.HomeFailed,
+                is EnforcementExecutionResult.HomeSent,
+                is EnforcementExecutionResult.HomeSuppressed -> OverlayType.NONE
+                is EnforcementExecutionResult.NoAction ->
+                    when (executionResult.decision.action) {
+                        EnforcementAction.ALLOW,
+                        EnforcementAction.NO_OP -> OverlayType.NONE
+                        else -> previousOverlayType
+                    }
+            }
     }
 }
 
 class RuntimeExecutor(
     service: BusterAccessibilityService,
-    passRepository: LocalPassRepository
+    passRepository: LocalPassRepository,
+    private val overlayState: RuntimeOverlayState
 ) {
+    private val homeActionPerformer = AccessibilityHomeActionPerformer(service)
     private val overlayController = SimpleOverlayController(
         context = service,
         windowType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -339,13 +404,30 @@ class RuntimeExecutor(
                         untilMillis = System.currentTimeMillis() + decision.durationMillis
                     )
                 )
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "challenge passed activePass package=${decision.targetIdentity.rawPackageName} durationMillis=${decision.durationMillis}"
+                )
+                overlayState.activeOverlayType = OverlayType.NONE
+            }
+
+            override fun onQuitAction(decision: com.addictionbuster.enforcement.EnforcementDecision) {
+                passRepository.clear()
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "overlay quit fail-closed-home package=${decision.targetIdentity.rawPackageName}"
+                )
+                homeActionPerformer.performHome()
+                overlayState.activeOverlayType = OverlayType.NONE
             }
         }
     )
     private val executor = EnforcementExecutor(
         context = service,
         overlayController = overlayController,
-        homeActionPerformer = AccessibilityHomeActionPerformer(service),
+        homeActionPerformer = homeActionPerformer,
         overlayPermissionChecker = object : OverlayPermissionChecker {
             override fun canShowOverlay(): Boolean = true
         }
@@ -358,7 +440,13 @@ class RuntimeExecutor(
 
     fun removeOverlays() {
         overlayController.removeAll()
+        overlayState.activeOverlayType = OverlayType.NONE
     }
+}
+
+class RuntimeOverlayState {
+    @Volatile
+    var activeOverlayType: OverlayType = OverlayType.NONE
 }
 
 private fun EnforcementExecutionResult.logName(): String =

@@ -7,28 +7,30 @@ import com.addictionbuster.enforcement.GlobalPolicy
 import com.addictionbuster.enforcement.RuleSnapshot
 import com.addictionbuster.enforcement.SleepPolicy
 import com.addictionbuster.enforcement.identity.CloneContainerCatalog
+import com.addictionbuster.enforcement.storage.LocalPassRepository
 import com.addictionbuster.enforcement.storage.LocalRuleRepository
 
 object V2RuleBridge {
     @JvmStatic
     fun saveAppRule(context: Context, packageName: String, rule: AppRule) {
         val repository = LocalRuleRepository(context.applicationContext)
-        val current = if (repository.hasRules()) {
-            repository.load()
-        } else {
-            emptySnapshot()
-        }
+        val current = loadCurrentOrFresh(context, repository, "save app rule package=$packageName")
         val identityKey = packageName
         val updatedPolicy = AppPolicy(
             identityKey = identityKey,
             enabled = true,
             challengeEnabled = true,
             dailyLimitMillis = minutesToMillis(rule.dailyQuotaMinutes),
-            sessionLimitMillis = minutesToMillis(rule.sessionLimitMinutes),
+            sessionLimitMillis = 0L,
             continuousUseLimitMillis = 0L,
             restRequiredMillis = 0L,
             dailyOpenLimit = 0,
             passthroughMillis = minutesToMillis(rule.sessionLimitMinutes),
+            challengeWaitMillis = secondsToMillis(rule.waitSeconds),
+            challengeRequiredTaps = rule.requiredTaps.coerceAtLeast(0),
+            challengeHiddenCount = rule.hiddenCount.coerceAtLeast(0),
+            challengeHiddenMillis = secondsToMillis(rule.hiddenSeconds),
+            challengeConfirmText = rule.confirmText,
             cooldownAfterUseMillis = 0L,
             cooldownAfterQuitMillis = 0L,
             countTowardsPhoneUsage = true
@@ -38,21 +40,41 @@ object V2RuleBridge {
                 appPoliciesByIdentity = current.appPoliciesByIdentity + (identityKey to updatedPolicy)
             )
         )
-        DiagnosticLogger.log(context, "rule", "saved v2 app policy package=$packageName")
+        LocalPassRepository(context.applicationContext).clear()
+        DiagnosticLogger.log(context, "rule", "saved v2 app policy package=$packageName clearedActivePass=true")
     }
 
     @JvmStatic
     fun clearAppRule(context: Context, packageName: String) {
         val repository = LocalRuleRepository(context.applicationContext)
         if (!repository.hasRules()) return
-        val current = repository.load()
+        val current = loadCurrentOrFresh(context, repository, "clear app rule package=$packageName")
         repository.save(
             current.copy(
                 appPoliciesByIdentity = current.appPoliciesByIdentity - packageName,
                 pagePoliciesByIdentity = current.pagePoliciesByIdentity - packageName
             )
         )
-        DiagnosticLogger.log(context, "rule", "cleared v2 app policy package=$packageName")
+        LocalPassRepository(context.applicationContext).clear()
+        DiagnosticLogger.log(context, "rule", "cleared v2 app policy package=$packageName clearedActivePass=true")
+    }
+
+    private fun loadCurrentOrFresh(
+        context: Context,
+        repository: LocalRuleRepository,
+        reason: String
+    ): RuleSnapshot {
+        if (!repository.hasRules()) return emptySnapshot()
+        return try {
+            repository.load()
+        } catch (throwable: Throwable) {
+            DiagnosticLogger.log(
+                context,
+                "rule",
+                "rebuild v2 rule snapshot reason=$reason error=${throwable.message}"
+            )
+            emptySnapshot()
+        }
     }
 
     private fun emptySnapshot(): RuleSnapshot =
@@ -78,4 +100,7 @@ object V2RuleBridge {
 
     private fun minutesToMillis(minutes: Int): Long =
         minutes.coerceAtLeast(0).toLong() * 60_000L
+
+    private fun secondsToMillis(seconds: Int): Long =
+        seconds.coerceAtLeast(0).toLong() * 1000L
 }

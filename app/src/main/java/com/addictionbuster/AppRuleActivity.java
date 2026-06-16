@@ -217,21 +217,28 @@ public class AppRuleActivity extends Activity {
     }
 
     private void saveRule() {
-        AppRule rule = new AppRule(
-                intValue(dailyQuotaInput, AppRule.DEFAULT_DAILY_QUOTA_MINUTES),
-                intValue(sessionLimitInput, AppRule.DEFAULT_SESSION_LIMIT_MINUTES),
-                intValue(waitSecondsInput, AppRule.DEFAULT_WAIT_SECONDS),
-                intValue(requiredTapsInput, AppRule.DEFAULT_REQUIRED_TAPS),
-                intValue(hiddenCountInput, AppRule.DEFAULT_HIDDEN_COUNT),
-                intValue(hiddenSecondsInput, AppRule.DEFAULT_HIDDEN_SECONDS),
-                confirmTextInput.getText().toString()
-        );
-        Set<String> blockedPackages = RuleStore.getBlockedPackages(this);
-        blockedPackages.add(packageName);
-        RuleStore.saveBlockedPackages(this, blockedPackages);
-        RuleStore.saveAppRule(this, packageName, rule);
-        V2RuleBridge.saveAppRule(this, packageName, rule);
-        Toast.makeText(this, "规则已保存", Toast.LENGTH_SHORT).show();
+        try {
+            AppRule rule = new AppRule(
+                    intValue(dailyQuotaInput, AppRule.DEFAULT_DAILY_QUOTA_MINUTES),
+                    intValue(sessionLimitInput, AppRule.DEFAULT_SESSION_LIMIT_MINUTES),
+                    intValue(waitSecondsInput, AppRule.DEFAULT_WAIT_SECONDS),
+                    intValue(requiredTapsInput, AppRule.DEFAULT_REQUIRED_TAPS),
+                    intValue(hiddenCountInput, AppRule.DEFAULT_HIDDEN_COUNT),
+                    intValue(hiddenSecondsInput, AppRule.DEFAULT_HIDDEN_SECONDS),
+                    confirmTextInput.getText().toString()
+            );
+            Set<String> blockedPackages = RuleStore.getBlockedPackages(this);
+            blockedPackages.add(packageName);
+            RuleStore.saveBlockedPackages(this, blockedPackages);
+            RuleStore.saveAppRule(this, packageName, rule);
+            V2RuleBridge.saveAppRule(this, packageName, rule);
+            Toast.makeText(this, "规则已保存", Toast.LENGTH_SHORT).show();
+            finish();
+        } catch (RuntimeException exception) {
+            DiagnosticLogger.log(this, "rule", "failed to save rule package=" + packageName
+                    + " error=" + exception.getMessage());
+            Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void disableRule() {
