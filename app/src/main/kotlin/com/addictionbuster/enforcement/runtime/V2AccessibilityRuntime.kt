@@ -45,10 +45,12 @@ import com.addictionbuster.enforcement.storage.UsageCommitWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 object V2AccessibilityRuntime {
     private const val TAG = "V2AccessibilityRuntime"
+    private const val TICK_INTERVAL_MILLIS = 1_000L
     private const val WINDOW_EVENT_TYPES =
         AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
 
@@ -61,6 +63,7 @@ object V2AccessibilityRuntime {
         holder.queue.start()
         holder.recoverOfflineGap()
         runtime = holder
+        scope.launch { holder.runTicks() }
         V2DiagnosticBridge.log(service, "v2", "runtime connected")
         Log.d(TAG, "v2 accessibility runtime connected")
     }
@@ -70,6 +73,7 @@ object V2AccessibilityRuntime {
         val holder = runtime ?: RuntimeHolder.create(service).also {
             it.queue.start()
             runtime = it
+            scope.launch { it.runTicks() }
         }
         if (event == null || (event.eventType and WINDOW_EVENT_TYPES) == 0) return
         val packageName = event.packageName?.toString().orEmpty()
@@ -199,6 +203,59 @@ object V2AccessibilityRuntime {
             lastContext = nextSliceContext
         }
 
+        suspend fun runTicks() {
+            while (runtime === this) {
+                delay(TICK_INTERVAL_MILLIS)
+                try {
+                    processTick(System.currentTimeMillis())
+                } catch (throwable: Throwable) {
+                    V2DiagnosticBridge.log(service, "v2", "tick exception error=${throwable.message}")
+                    Log.w(TAG, "failed to process v2 tick", throwable)
+                }
+            }
+        }
+
+        private suspend fun processTick(nowMillis: Long) {
+            val last = lastContext ?: return
+            val rules = try {
+                ruleRepository.load()
+            } catch (throwable: Throwable) {
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "tick rules unavailable identity=${last.foregroundApp.identityKey} error=${throwable.message}"
+                )
+                handleUnavailableRules(last.foregroundApp, nowMillis)
+                return
+            }
+            val currentContext = buildTickContext(
+                nowMillis = nowMillis,
+                previousContext = last,
+                rules = rules
+            )
+            val result = queue.submit(
+                previousContext = last,
+                currentContext = currentContext
+            )
+            V2DiagnosticBridge.log(
+                service,
+                "v2",
+                "tick decision package=${currentContext.foregroundApp.rawPackageName} action=${result.decision.action} reason=${result.decision.reasonCode} overlay=${result.decision.overlayType}"
+            )
+            val executionResult = executor.execute(result.decision, currentContext)
+            overlayState.activeOverlayType = overlayTypeAfter(
+                executionResult = executionResult,
+                previousOverlayType = overlayState.activeOverlayType
+            )
+            val nextSliceContext = currentContext.copy(
+                activeOverlayType = overlayState.activeOverlayType,
+                sliceStartedAtMillis = nowMillis
+            )
+            decisionEventRecorder.record(nextSliceContext, result.decision, bootMarker)
+            stateRepository.save(nextSliceContext.toPersistentState(bootMarker))
+            lastContext = nextSliceContext
+        }
+
         private fun isOwnOverlayWindowEvent(event: AccessibilityEvent, packageName: String): Boolean {
             if (overlayState.activeOverlayType == OverlayType.NONE) return false
             if (packageName != service.packageName) return false
@@ -252,6 +309,61 @@ object V2AccessibilityRuntime {
                 } else {
                     last?.sliceStartedAtMillis ?: nowMillis
                 },
+                ruleSnapshot = rules,
+                usageSnapshot = UsageSnapshot(
+                    appDailyUsedMillis = appUsage.usedMillis + appUsage.pendingOfflineGapMillis,
+                    appSessionUsedMillis = appUsage.sessionUsedMillis,
+                    appContinuousUsedMillis = appUsage.continuousUsedMillis,
+                    appDailyOpenCount = appUsage.openCount,
+                    phoneDailyUsedMillis = phoneUsage.dailyUsedMillis + phoneUsage.pendingOfflineGapMillis,
+                    phoneSessionUsedMillis = phoneUsage.sessionUsedMillis,
+                    sleepLockActive = sleepScheduleEvaluator.isSleepActive(rules.sleepPolicy, nowMillis)
+                ),
+                systemHealthState = systemHealth,
+                safeZonePolicy = AndroidSafeZonePolicyFactory.create(service),
+                activePass = activePass,
+                activeCooldown = null
+            )
+        }
+
+        private fun buildTickContext(
+            nowMillis: Long,
+            previousContext: EnforcementContext,
+            rules: RuleSnapshot
+        ): EnforcementContext {
+            val identity = previousContext.foregroundApp
+            val appUsage = appUsageRepository.load(identity.identityKey)
+            val phoneUsage = phoneUsageRepository.load()
+            val activePass = passRepository.load()?.let { pass ->
+                if (pass.untilMillis <= nowMillis) {
+                    passRepository.clear()
+                    V2DiagnosticBridge.log(
+                        service,
+                        "v2",
+                        "active pass expired identity=${pass.identityKey} untilMillis=${pass.untilMillis}"
+                    )
+                    null
+                } else {
+                    pass
+                }
+            }
+            val systemHealth = healthReader.read(
+                notificationListenerConnected = false,
+                foregroundServiceRunning = V2EnforcementForegroundService.isRunning()
+            ).copy(
+                overlayPermissionGranted = true
+            )
+            return EnforcementContext(
+                nowMillis = nowMillis,
+                eventType = EnforcementEventType.TICK,
+                foregroundApp = identity,
+                previousForegroundApp = previousContext.previousForegroundApp,
+                currentPage = previousContext.currentPage,
+                pageContextMissingSinceMillis = previousContext.pageContextMissingSinceMillis,
+                screenState = previousContext.screenState,
+                activeOverlayType = overlayState.activeOverlayType,
+                foregroundStartedAtMillis = previousContext.foregroundStartedAtMillis,
+                sliceStartedAtMillis = previousContext.sliceStartedAtMillis,
                 ruleSnapshot = rules,
                 usageSnapshot = UsageSnapshot(
                     appDailyUsedMillis = appUsage.usedMillis + appUsage.pendingOfflineGapMillis,

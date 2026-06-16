@@ -195,6 +195,38 @@ class EnforcementEngineTest {
         assertEquals(ReasonCode.APP_CHALLENGE_REQUIRED, decision.reasonCode)
     }
 
+    @Test
+    fun tickSettlesUsageAndReChallengesWhenActivePassExpired() {
+        val app = normalApp()
+        val rules = rules(
+            appPolicy = appPolicy(
+                identityKey = app.identityKey,
+                challengeEnabled = true,
+                dailyLimitMillis = 300L * 60_000L,
+                passthroughMillis = 10L * 60_000L
+            )
+        )
+        val previousContext = context(
+            nowMillis = 1_000L,
+            app = app,
+            ruleSnapshot = rules,
+            activePass = ActivePass(app.identityKey, untilMillis = 2_000L)
+        )
+        val currentContext = context(
+            nowMillis = 2_500L,
+            app = app,
+            ruleSnapshot = rules,
+            usageSnapshot = usage(appDailyUsedMillis = 1_500L),
+            activePass = null
+        ).copy(eventType = EnforcementEventType.TICK)
+
+        val result = UnifiedEnforcementProcessor().process(previousContext, currentContext)
+
+        assertEquals(1_500L, result.usageCommit.appUsageMillis)
+        assertEquals(EnforcementAction.SHOW_APP_CHALLENGE, result.decision.action)
+        assertEquals(ReasonCode.APP_CHALLENGE_REQUIRED, result.decision.reasonCode)
+    }
+
     private fun context(
         nowMillis: Long = 1_000L,
         app: AppIdentity = normalApp(),
