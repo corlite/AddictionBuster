@@ -48,6 +48,15 @@ class EnforcementEngine {
                 OverlayType.NONE
             )
 
+            context.screenState != ScreenState.UNLOCKED -> decision(
+                EnforcementAction.NO_OP,
+                Priority.SCREEN_NOT_UNLOCKED,
+                app,
+                ReasonCode.SCREEN_NOT_UNLOCKED,
+                "screen is not unlocked",
+                OverlayType.NONE
+            )
+
             context.systemHealthState.hasFatalIssue -> decision(
                 EnforcementAction.FAIL_CLOSED_GLOBAL,
                 Priority.SYSTEM_HEALTH_FAIL_CLOSED,
@@ -336,19 +345,20 @@ class EnforcementEngine {
         const val SAFE_ZONE_ALLOW = 0
         const val SYSTEM_ALLOW = 1
         const val EMERGENCY_ALLOW = 2
-        const val SYSTEM_HEALTH_FAIL_CLOSED = 3
-        const val CLONE_BLOCK = 4
-        const val SLEEP_LOCK = 5
-        const val PHONE_DAILY = 6
-        const val PHONE_SESSION = 7
-        const val APP_DAILY = 8
-        const val APP_SESSION = 9
-        const val APP_CONTINUOUS = 10
-        const val APP_OPEN_COUNT = 11
-        const val PAGE = 12
-        const val COOLDOWN = 13
-        const val CHALLENGE = 14
-        const val ALLOW = 15
+        const val SCREEN_NOT_UNLOCKED = 3
+        const val SYSTEM_HEALTH_FAIL_CLOSED = 4
+        const val CLONE_BLOCK = 5
+        const val SLEEP_LOCK = 6
+        const val PHONE_DAILY = 7
+        const val PHONE_SESSION = 8
+        const val APP_DAILY = 9
+        const val APP_SESSION = 10
+        const val APP_CONTINUOUS = 11
+        const val APP_OPEN_COUNT = 12
+        const val PAGE = 13
+        const val COOLDOWN = 14
+        const val CHALLENGE = 15
+        const val ALLOW = 16
     }
 
     private data class PageEvaluation(

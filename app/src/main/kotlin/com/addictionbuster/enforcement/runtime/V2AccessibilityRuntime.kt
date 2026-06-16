@@ -93,6 +93,23 @@ object V2AccessibilityRuntime {
     }
 
     @JvmStatic
+    fun onScreenEvent(service: BusterAccessibilityService, action: String?) {
+        val holder = runtime ?: RuntimeHolder.create(service).also {
+            it.queue.start()
+            runtime = it
+            scope.launch { it.runTicks() }
+        }
+        scope.launch {
+            try {
+                holder.processScreenEvent(action.orEmpty(), System.currentTimeMillis())
+            } catch (throwable: Throwable) {
+                V2DiagnosticBridge.log(service, "v2", "screen event exception action=$action error=${throwable.message}")
+                Log.w(TAG, "failed to process v2 screen event action=$action", throwable)
+            }
+        }
+    }
+
+    @JvmStatic
     fun onDestroy() {
         runtime?.executor?.removeOverlays()
         runtime = null
@@ -256,6 +273,70 @@ object V2AccessibilityRuntime {
             lastContext = nextSliceContext
         }
 
+        suspend fun processScreenEvent(action: String, nowMillis: Long) {
+            val screenEvent = screenEventFor(action) ?: return
+            val last = lastContext
+            if (last == null) {
+                stateRepository.save(
+                    PersistentRuntimeState(
+                        lastEventTimeMillis = nowMillis,
+                        lastForegroundIdentityKey = "",
+                        lastRawPackageName = "",
+                        lastScreenState = screenEvent.screenState,
+                        bootMarker = bootMarker
+                    )
+                )
+                if (screenEvent.resetPhoneSession) {
+                    phoneUsageRepository.resetSession()
+                }
+                V2DiagnosticBridge.log(service, "v2", "screen event stored without foreground action=$action")
+                return
+            }
+            val rules = try {
+                ruleRepository.load()
+            } catch (throwable: Throwable) {
+                V2DiagnosticBridge.log(
+                    service,
+                    "v2",
+                    "screen rules unavailable action=$action identity=${last.foregroundApp.identityKey} error=${throwable.message}"
+                )
+                handleUnavailableRules(last.foregroundApp, nowMillis)
+                return
+            }
+            val currentContext = buildScreenContext(
+                nowMillis = nowMillis,
+                previousContext = last,
+                rules = rules,
+                eventType = screenEvent.eventType,
+                screenState = screenEvent.screenState
+            )
+            val result = queue.submit(
+                previousContext = last,
+                currentContext = currentContext
+            )
+            V2DiagnosticBridge.log(
+                service,
+                "v2",
+                "screen decision action=$action package=${currentContext.foregroundApp.rawPackageName} decision=${result.decision.action} reason=${result.decision.reasonCode}"
+            )
+            val executionResult = executor.execute(result.decision, currentContext)
+            overlayState.activeOverlayType = overlayTypeAfter(
+                executionResult = executionResult,
+                previousOverlayType = overlayState.activeOverlayType
+            )
+            if (screenEvent.resetPhoneSession) {
+                phoneUsageRepository.resetSession()
+                V2DiagnosticBridge.log(service, "v2", "phone session reset by screen action=$action")
+            }
+            val nextSliceContext = currentContext.copy(
+                activeOverlayType = overlayState.activeOverlayType,
+                sliceStartedAtMillis = nowMillis
+            )
+            decisionEventRecorder.record(nextSliceContext, result.decision, bootMarker)
+            stateRepository.save(nextSliceContext.toPersistentState(bootMarker))
+            lastContext = nextSliceContext
+        }
+
         private fun isOwnOverlayWindowEvent(event: AccessibilityEvent, packageName: String): Boolean {
             if (overlayState.activeOverlayType == OverlayType.NONE) return false
             if (packageName != service.packageName) return false
@@ -381,6 +462,22 @@ object V2AccessibilityRuntime {
             )
         }
 
+        private fun buildScreenContext(
+            nowMillis: Long,
+            previousContext: EnforcementContext,
+            rules: RuleSnapshot,
+            eventType: EnforcementEventType,
+            screenState: ScreenState
+        ): EnforcementContext =
+            buildTickContext(
+                nowMillis = nowMillis,
+                previousContext = previousContext,
+                rules = rules
+            ).copy(
+                eventType = eventType,
+                screenState = screenState
+            )
+
         private fun handleUnavailableRules(identity: AppIdentity, nowMillis: Long) {
             val safeZonePolicy = AndroidSafeZonePolicyFactory.create(service)
             if (safeZonePolicy.isSafe(identity)) {
@@ -494,6 +591,32 @@ object V2AccessibilityRuntime {
                         else -> previousOverlayType
                     }
             }
+
+        private fun screenEventFor(action: String): ScreenRuntimeEvent? =
+            when (action) {
+                Intent.ACTION_SCREEN_OFF -> ScreenRuntimeEvent(
+                    eventType = EnforcementEventType.SCREEN_OFF,
+                    screenState = ScreenState.OFF,
+                    resetPhoneSession = true
+                )
+                Intent.ACTION_SCREEN_ON -> ScreenRuntimeEvent(
+                    eventType = EnforcementEventType.SCREEN_ON,
+                    screenState = ScreenState.ON,
+                    resetPhoneSession = true
+                )
+                Intent.ACTION_USER_PRESENT -> ScreenRuntimeEvent(
+                    eventType = EnforcementEventType.USER_PRESENT,
+                    screenState = ScreenState.UNLOCKED,
+                    resetPhoneSession = true
+                )
+                else -> null
+            }
+
+        private data class ScreenRuntimeEvent(
+            val eventType: EnforcementEventType,
+            val screenState: ScreenState,
+            val resetPhoneSession: Boolean
+        )
     }
 }
 

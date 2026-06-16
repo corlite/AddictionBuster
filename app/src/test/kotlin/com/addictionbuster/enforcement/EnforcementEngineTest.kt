@@ -81,6 +81,23 @@ class EnforcementEngineTest {
     }
 
     @Test
+    fun lockedScreenDoesNotShowPhoneLimitOverlay() {
+        val context = context(
+            screenState = ScreenState.OFF,
+            usageSnapshot = usage(phoneDailyUsedMillis = 60_000L),
+            ruleSnapshot = rules(
+                appPolicy = null,
+                globalPolicy = globalPolicy(phoneDailyLimitMillis = 60_000L)
+            )
+        )
+
+        val decision = engine.decide(context)
+
+        assertEquals(EnforcementAction.NO_OP, decision.action)
+        assertEquals(ReasonCode.SCREEN_NOT_UNLOCKED, decision.reasonCode)
+    }
+
+    @Test
     fun overlayFailureOnSafeZoneFailsFast() {
         val app = launcherApp()
         val context = context(
@@ -266,6 +283,7 @@ class EnforcementEngineTest {
         app: AppIdentity = normalApp(),
         currentPage: PageSnapshot? = PageSnapshot("MainActivity", ""),
         pageContextMissingSinceMillis: Long? = null,
+        screenState: ScreenState = ScreenState.UNLOCKED,
         activeOverlayType: OverlayType = OverlayType.NONE,
         ruleSnapshot: RuleSnapshot = rules(appPolicy = appPolicy(app.identityKey, challengeEnabled = true)),
         usageSnapshot: UsageSnapshot = usage(),
@@ -281,7 +299,7 @@ class EnforcementEngineTest {
             previousForegroundApp = null,
             currentPage = currentPage,
             pageContextMissingSinceMillis = pageContextMissingSinceMillis,
-            screenState = ScreenState.UNLOCKED,
+            screenState = screenState,
             activeOverlayType = activeOverlayType,
             foregroundStartedAtMillis = 1_000L,
             sliceStartedAtMillis = 1_000L,

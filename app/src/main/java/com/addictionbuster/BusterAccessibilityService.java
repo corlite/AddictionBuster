@@ -65,6 +65,7 @@ public class BusterAccessibilityService extends AccessibilityService {
         if (V2RuntimeMode.isEnabled(this)) {
             DiagnosticLogger.log(this, "service", "v2 enforcement enabled; legacy accessibility judge disabled");
             com.addictionbuster.enforcement.runtime.V2AccessibilityRuntime.onServiceConnected(this);
+            registerScreenReceiver();
             return;
         }
         RuleStore.clearChallengePackage(this);
@@ -214,6 +215,13 @@ public class BusterAccessibilityService extends AccessibilityService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String action = intent == null ? "" : intent.getAction();
+                if (V2RuntimeMode.isEnabled(BusterAccessibilityService.this)) {
+                    com.addictionbuster.enforcement.runtime.V2AccessibilityRuntime.onScreenEvent(
+                            BusterAccessibilityService.this,
+                            action
+                    );
+                    return;
+                }
                 if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                     addCurrentForegroundUsage("screen off", false);
                     phoneSessionUsedMillis = 0L;
