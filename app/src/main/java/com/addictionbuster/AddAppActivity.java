@@ -28,6 +28,7 @@ public class AddAppActivity extends Activity {
         apps = AppCatalog.loadLaunchableApps(this);
         DiagnosticLogger.log(this, "main", "add app screen opened launchableApps=" + apps.size());
         setContentView(buildContent());
+        MascotSoundPlayer.play(this, MascotVoiceSlot.ADD_APPS);
     }
 
     @Override

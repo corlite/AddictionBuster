@@ -62,7 +62,7 @@ public class MascotSettingsActivity extends Activity {
         iconButton.setOnClickListener(v -> openPicker("image/*", REQUEST_ICON));
         assetCard.addView(iconButton, UiKit.matchWrap());
         assetCard.addView(iconPathView, UiKit.spaced(this, 6));
-        TextView voiceHint = UiKit.hint(this, "语音不能复用：每个角色槽位需要分别导入 4 条场景语音。");
+        TextView voiceHint = UiKit.hint(this, "语音不能复用：每个角色槽位需要分别导入 9 条场景语音。");
         voiceHint.setPadding(0, UiKit.dp(this, 10), 0, UiKit.dp(this, 4));
         assetCard.addView(voiceHint, UiKit.matchWrap());
         for (MascotVoiceSlot slot : MascotVoiceSlot.values()) {

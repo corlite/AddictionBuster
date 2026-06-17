@@ -21,6 +21,7 @@ public class ActiveAppsActivity extends Activity {
         super.onCreate(savedInstanceState);
         DiagnosticLogger.log(this, "main", "active apps screen opened");
         setContentView(buildContent());
+        MascotSoundPlayer.play(this, MascotVoiceSlot.ACTIVE_APPS);
     }
 
     private LinearLayout buildContent() {

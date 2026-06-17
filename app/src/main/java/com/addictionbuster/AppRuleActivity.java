@@ -47,6 +47,7 @@ public class AppRuleActivity extends Activity {
         }
         DiagnosticLogger.log(this, "rule", "rule screen opened package=" + packageName + " label=" + label);
         setContentView(buildContent());
+        MascotSoundPlayer.play(this, MascotVoiceSlot.APP_RULE);
     }
 
     static Intent intentFor(Activity activity, String packageName, String label) {

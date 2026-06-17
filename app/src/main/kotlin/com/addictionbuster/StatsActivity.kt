@@ -18,6 +18,7 @@ class StatsActivity : Activity() {
         super.onCreate(savedInstanceState)
         DiagnosticLogger.log(this, "stats", "stats screen opened")
         setContentView(buildContent())
+        MascotSoundPlayer.play(this, MascotVoiceSlot.TODAY_REPORT)
     }
 
     private fun buildContent(): ScrollView {

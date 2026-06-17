@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
             startActivity(new Intent(this, V2RequiredSetupActivity.class));
         }
         setContentView(buildContent());
+        MascotSoundPlayer.play(this, MascotVoiceSlot.CONTROL_APPS);
     }
 
     @Override
