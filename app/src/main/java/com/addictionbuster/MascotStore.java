@@ -46,12 +46,12 @@ public final class MascotStore {
         prefs(context).edit().putString(KEY_ICON_PREFIX + profile.name(), clean(uri)).apply();
     }
 
-    public static String getVoiceUri(Context context, MascotProfile profile) {
-        return prefs(context).getString(KEY_VOICE_PREFIX + profile.name(), "");
+    public static String getVoiceUri(Context context, MascotProfile profile, MascotVoiceSlot slot) {
+        return prefs(context).getString(voiceKey(profile, slot), "");
     }
 
-    public static void setVoiceUri(Context context, MascotProfile profile, String uri) {
-        prefs(context).edit().putString(KEY_VOICE_PREFIX + profile.name(), clean(uri)).apply();
+    public static void setVoiceUri(Context context, MascotProfile profile, MascotVoiceSlot slot, String uri) {
+        prefs(context).edit().putString(voiceKey(profile, slot), clean(uri)).apply();
     }
 
     public static String getCurrentIconUri(Context context) {
@@ -59,9 +59,9 @@ public final class MascotStore {
         return profile == MascotProfile.NONE ? "" : getIconUri(context, profile);
     }
 
-    public static String getCurrentVoiceUri(Context context) {
+    public static String getCurrentVoiceUri(Context context, MascotVoiceSlot slot) {
         MascotProfile profile = getProfile(context);
-        return profile == MascotProfile.NONE ? "" : getVoiceUri(context, profile);
+        return profile == MascotProfile.NONE ? "" : getVoiceUri(context, profile, slot);
     }
 
     public static int clampVolumePercent(int percent) {
@@ -74,5 +74,9 @@ public final class MascotStore {
 
     private static String clean(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String voiceKey(MascotProfile profile, MascotVoiceSlot slot) {
+        return KEY_VOICE_PREFIX + profile.name() + "_" + slot.name();
     }
 }

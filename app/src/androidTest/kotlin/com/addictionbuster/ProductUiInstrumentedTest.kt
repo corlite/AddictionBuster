@@ -50,6 +50,10 @@ class ProductUiInstrumentedTest {
 
                 assertTrue(content.containsText("角色与语音"))
                 assertTrue(content.containsText("选择角色槽位"))
+                assertTrue(content.containsText("拦截出现"))
+                assertTrue(content.containsText("挑战通过"))
+                assertTrue(content.containsText("手机时长到"))
+                assertTrue(content.containsText("权限异常"))
                 content.findTaggedView("profile_DORO")!!.performClick()
                 assertTrue(MascotStore.getProfile(activity) == MascotProfile.DORO)
             }

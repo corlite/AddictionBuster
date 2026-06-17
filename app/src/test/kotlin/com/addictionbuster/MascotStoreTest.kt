@@ -17,4 +17,13 @@ class MascotStoreTest {
         assertEquals(60, MascotStore.clampVolumePercent(60))
         assertEquals(100, MascotStore.clampVolumePercent(120))
     }
+
+    @Test
+    fun voiceSlotsDefineFourDistinctScenes() {
+        assertEquals(4, MascotVoiceSlot.values().size)
+        assertEquals("拦截出现", MascotVoiceSlot.BLOCK_APPEARED.displayName())
+        assertEquals("挑战通过", MascotVoiceSlot.CHALLENGE_PASSED.displayName())
+        assertEquals("手机时长到", MascotVoiceSlot.PHONE_LIMIT_REACHED.displayName())
+        assertEquals("权限异常", MascotVoiceSlot.PERMISSION_ISSUE.displayName())
+    }
 }
