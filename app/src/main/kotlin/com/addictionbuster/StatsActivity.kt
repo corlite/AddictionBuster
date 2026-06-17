@@ -69,10 +69,10 @@ class StatsActivity : Activity() {
     private fun LinearLayout.addAppUsageList(snapshot: DailyStatsSnapshot) {
         if (snapshot.appUsages.isEmpty()) {
             addView(
-                UiKit.hint(this@StatsActivity, "今天还没有统计记录。打开受控应用或设置手机时长后，这里会显示今日报告。").apply {
-                    gravity = Gravity.CENTER
-                    setPadding(0, UiKit.dp(this@StatsActivity, 10), 0, 0)
-                },
+                MascotUi.emptyState(
+                    this@StatsActivity,
+                    "今天还没有统计记录。打开受控应用或设置手机时长后，这里会显示今日报告。"
+                ),
                 UiKit.matchWrap()
             )
             return

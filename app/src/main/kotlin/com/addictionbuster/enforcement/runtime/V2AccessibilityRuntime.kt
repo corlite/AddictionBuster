@@ -7,6 +7,7 @@ import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import com.addictionbuster.BusterAccessibilityService
 import com.addictionbuster.V2DiagnosticBridge
+import com.addictionbuster.MascotSoundPlayer
 import com.addictionbuster.V2EnforcementForegroundService
 import com.addictionbuster.bootstrap.V2RequiredSetupActivity
 import com.addictionbuster.enforcement.AndroidSafeZonePolicyFactory
@@ -644,6 +645,7 @@ class RuntimeExecutor(
                     "v2",
                     "challenge passed activePass package=${decision.targetIdentity.rawPackageName} durationMillis=${decision.durationMillis}"
                 )
+                MascotSoundPlayer.playChallengePassed(service)
                 overlayState.activeOverlayType = OverlayType.NONE
             }
 

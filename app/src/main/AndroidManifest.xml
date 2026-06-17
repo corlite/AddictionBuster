@@ -47,6 +47,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".MascotSettingsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".AddAppActivity"
             android:exported="false" />
 

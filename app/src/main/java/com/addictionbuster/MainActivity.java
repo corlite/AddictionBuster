@@ -56,6 +56,7 @@ public class MainActivity extends Activity {
 
         LinearLayout statusCard = UiKit.card(this);
         statusCard.addView(UiKit.sectionTitle(this, "今日状态"), UiKit.matchWrap());
+        statusCard.addView(MascotUi.compactStatus(this), UiKit.matchWrap());
         selectedCountView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
         phoneUsageView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
         eventCountView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);

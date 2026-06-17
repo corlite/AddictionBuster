@@ -52,6 +52,14 @@ public class AppSettingsActivity extends Activity {
         optionalCard.addView(notificationAccessButton, UiKit.spaced(this, 10));
         root.addView(optionalCard, UiKit.spaced(this, 12));
 
+        LinearLayout mascotCard = UiKit.card(this);
+        mascotCard.addView(UiKit.sectionTitle(this, "角色与语音"), UiKit.matchWrap());
+        mascotCard.addView(MascotUi.compactStatus(this), UiKit.matchWrap());
+        Button mascotButton = UiKit.entryButton(this, "角色与语音", "选择角色槽位、导入图标和语音");
+        mascotButton.setOnClickListener(v -> startActivity(new Intent(this, MascotSettingsActivity.class)));
+        mascotCard.addView(mascotButton, UiKit.spaced(this, 10));
+        root.addView(mascotCard, UiKit.spaced(this, 12));
+
         LinearLayout diagnosticCard = UiKit.card(this);
         diagnosticCard.addView(UiKit.sectionTitle(this, "诊断"), UiKit.matchWrap());
         TextView diagnosticHint = UiKit.hint(this, "复现问题后，在诊断中心复制日志和最近关键事件。");

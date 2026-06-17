@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import com.addictionbuster.enforcement.SystemHealthIssue
+import com.addictionbuster.MascotSoundPlayer
 import com.addictionbuster.R
 
 class SystemHealthNotifier(private val context: Context) {
@@ -16,6 +17,7 @@ class SystemHealthNotifier(private val context: Context) {
 
     fun notifyFatalIssues(issues: Set<SystemHealthIssue>) {
         if (issues.isEmpty()) return
+        MascotSoundPlayer.playPermissionIssue(context)
         ensureChannel()
         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         val pendingIntent = PendingIntent.getActivity(

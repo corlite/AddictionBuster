@@ -14,6 +14,8 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.addictionbuster.MascotSoundPlayer
+import com.addictionbuster.MascotUi
 import com.addictionbuster.V2DiagnosticBridge
 import com.addictionbuster.enforcement.AppPolicy
 import com.addictionbuster.enforcement.EnforcementAction
@@ -49,6 +51,7 @@ class SimpleOverlayController(
                 }
                 windowManager.addView(view, layoutParams())
                 currentView = view
+                MascotSoundPlayer.playForAction(this.context, decision.action)
                 V2DiagnosticBridge.log(
                     this.context,
                     "v2",
@@ -105,6 +108,7 @@ class SimpleOverlayController(
 
     private fun buildBlockView(decision: EnforcementDecision): View {
         val root = rootLayout()
+        root.addView(MascotUi.overlayHeader(context), matchWrap())
         root.addView(text(titleFor(decision), 26, true), matchWrap())
         root.addView(text(decision.reasonText, 16, false).apply {
             setPadding(0, dp(18), 0, dp(18))
@@ -159,6 +163,7 @@ class SimpleOverlayController(
             isEnabled = false
         }
 
+        root.addView(MascotUi.overlayHeader(this.context), matchWrap())
         root.addView(text("先停一下", 26, true), matchWrap())
         root.addView(text("APP challenge is required", 16, false).apply {
             setPadding(0, dp(8), 0, dp(16))

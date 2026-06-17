@@ -33,7 +33,25 @@ class ProductUiInstrumentedTest {
 
                 assertTrue(content.containsText("必要权限"))
                 assertTrue(content.containsText("可选能力"))
+                assertTrue(content.containsText("角色与语音"))
                 assertTrue(content.containsText("诊断"))
+            }
+        }
+    }
+
+    @Test
+    fun mascotSettingsCanSelectProfileSlot() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        MascotStore.saveProfile(context, MascotProfile.NONE)
+
+        ActivityScenario.launch(MascotSettingsActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val content = activity.window.decorView
+
+                assertTrue(content.containsText("角色与语音"))
+                assertTrue(content.containsText("选择角色槽位"))
+                content.findTaggedView("profile_DORO")!!.performClick()
+                assertTrue(MascotStore.getProfile(activity) == MascotProfile.DORO)
             }
         }
     }
@@ -70,5 +88,21 @@ class ProductUiInstrumentedTest {
             }
         }
         return false
+    }
+
+    private fun View.findTaggedView(expected: String): View? {
+        if (tag == expected) {
+            return this
+        }
+        if (this !is ViewGroup) {
+            return null
+        }
+        for (index in 0 until childCount) {
+            val match = getChildAt(index).findTaggedView(expected)
+            if (match != null) {
+                return match
+            }
+        }
+        return null
     }
 }
