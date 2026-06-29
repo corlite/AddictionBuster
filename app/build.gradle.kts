@@ -11,14 +11,33 @@ android {
         applicationId = "com.addictionbuster.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 29
-        versionName = "0.2.9"
+        versionCode = 30
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("../release.keystore")
+            storePassword = "addictionbuster"
+            keyAlias = "addictionbuster"
+            keyPassword = "addictionbuster"
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            isMinifyEnabled = false
+        }
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 
