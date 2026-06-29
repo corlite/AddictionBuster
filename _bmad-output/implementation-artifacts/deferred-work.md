@@ -27,3 +27,8 @@
 - **Source:** Independent edge-case review
 - **Issue:** `SimpleOverlayController.runOnMainSynchronously()` waits without a timeout. A stalled main looper can therefore stall the runtime event consumer indefinitely.
 - **Recommended follow-up:** Add a cancel-safe bounded wait and fail-closed result, with tests for a rejected post, timeout before execution, and a task racing the timeout.
+
+## Deferred from: code review of spec-count-successful-interceptions (2026-06-29)
+
+- **Runtime stop may discard an accepted Quit:** The pre-existing shutdown path sets `active=false` before the ordered processor drains buffered work. A Quit accepted immediately before accessibility runtime shutdown can therefore be discarded while shutdown removes the overlay. Follow up by serializing stop as a FIFO input and draining accepted actions before deactivation.
+- **Home/result persistence is not crash-atomic:** A process death after Android accepts the Home action but before `INTERCEPTION_SUCCEEDED` is durably appended can undercount one successful exit. Strict resolution requires a small persistent `PendingQuit` transaction, idempotent recovery, and fault-injection tests across the Home/write boundary.

@@ -46,7 +46,8 @@ enum class EnforcementEventType {
     OFFLINE_GAP_DETECTED,
     DECISION_RECORDED,
     OVERLAY_SHOWN,
-    OVERLAY_REMOVED
+    OVERLAY_REMOVED,
+    INTERCEPTION_SUCCEEDED
 }
 
 enum class EnforcementAction {

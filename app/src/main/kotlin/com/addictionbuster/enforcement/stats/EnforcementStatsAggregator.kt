@@ -46,7 +46,7 @@ class EnforcementStatsAggregator(
     private fun List<EnforcementEventRecord>.toEventStats(): EventStats =
         EventStats(
             totalEvents = size,
-            blockEvents = count { it.isBlockEvent() },
+            blockEvents = countSuccessfulInterceptions(),
             cloneEvents = count {
                 it.eventType == EnforcementEventType.CLONE_RESOLVED ||
                         it.eventType == EnforcementEventType.CLONE_UNRESOLVED ||
@@ -58,13 +58,6 @@ class EnforcementStatsAggregator(
                 .sumOf { it.details["durationMillis"]?.toLongOrNull() ?: 0L }
         )
 
-    private fun EnforcementEventRecord.isBlockEvent(): Boolean {
-        val reason = details["reasonCode"] ?: return false
-        return reason.endsWith("_BLOCK") ||
-                reason == ReasonCode.SYSTEM_HEALTH_FAIL_CLOSED.name ||
-                reason == ReasonCode.PAGE_CONTEXT_MISSING.name
-    }
-
     private fun EnforcementEventRecord.isPermissionAbnormalEvent(): Boolean =
         details["systemHealthIssues"]?.isNotBlank() == true ||
                 details["overlayPermissionGranted"] == "false" ||
@@ -74,3 +67,12 @@ class EnforcementStatsAggregator(
     private fun EnforcementEventRecord.dateKey(): String =
         Instant.ofEpochMilli(occurredAtMillis).atZone(zoneId).toLocalDate().toString()
 }
+
+internal fun Iterable<EnforcementEventRecord>.countSuccessfulInterceptions(): Int =
+    filter { it.eventType == EnforcementEventType.INTERCEPTION_SUCCEEDED }
+        .distinctBy { record ->
+            record.details["overlaySessionId"]
+                ?.takeIf { it.isNotBlank() }
+                ?: "event:${record.eventId}"
+        }
+        .count()

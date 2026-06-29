@@ -3,6 +3,7 @@ package com.addictionbuster.enforcement.stats
 import com.addictionbuster.enforcement.EnforcementContext
 import com.addictionbuster.enforcement.EnforcementDecision
 import com.addictionbuster.enforcement.EnforcementEventType
+import com.addictionbuster.enforcement.ScreenState
 import com.addictionbuster.enforcement.storage.LocalEventStore
 
 class DecisionEventRecorder(
@@ -27,5 +28,30 @@ class DecisionEventRecorder(
                 "foregroundServiceRunning" to context.systemHealthState.foregroundServiceRunning.toString()
             )
         )
+    }
+
+    fun recordSuccessfulInterception(
+        outcome: SuccessfulInterceptionOutcome,
+        occurredAtMillis: Long,
+        screenState: ScreenState,
+        bootMarker: String
+    ): Boolean {
+        if (outcome.overlaySessionId.isBlank()) return false
+        return eventStore.appendIfDetailAbsent(
+            eventType = EnforcementEventType.INTERCEPTION_SUCCEEDED,
+            uniqueDetailKey = "overlaySessionId",
+            uniqueDetailValue = outcome.overlaySessionId,
+            occurredAtMillis = occurredAtMillis,
+            foregroundIdentityKey = outcome.targetIdentity.identityKey,
+            rawPackageName = outcome.targetIdentity.rawPackageName,
+            screenState = screenState,
+            bootMarker = bootMarker,
+            details = mapOf(
+                "outcome" to "USER_QUIT_TO_HOME",
+                "triggerAction" to outcome.triggerAction.name,
+                "triggerReasonCode" to outcome.triggerReasonCode.name,
+                "overlayType" to outcome.overlayType.name
+            )
+        ) != null
     }
 }

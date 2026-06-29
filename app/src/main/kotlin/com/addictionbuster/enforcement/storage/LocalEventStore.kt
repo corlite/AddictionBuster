@@ -44,6 +44,34 @@ class LocalEventStore(context: Context) {
     }
 
     @Synchronized
+    fun appendIfDetailAbsent(
+        eventType: EnforcementEventType,
+        uniqueDetailKey: String,
+        uniqueDetailValue: String,
+        occurredAtMillis: Long,
+        foregroundIdentityKey: String,
+        rawPackageName: String,
+        screenState: ScreenState,
+        bootMarker: String,
+        details: Map<String, String> = emptyMap()
+    ): EnforcementEventRecord? {
+        val duplicateExists = readAll().any { record ->
+            record.eventType == eventType &&
+                    record.details[uniqueDetailKey] == uniqueDetailValue
+        }
+        if (duplicateExists) return null
+        return append(
+            eventType = eventType,
+            occurredAtMillis = occurredAtMillis,
+            foregroundIdentityKey = foregroundIdentityKey,
+            rawPackageName = rawPackageName,
+            screenState = screenState,
+            bootMarker = bootMarker,
+            details = details + (uniqueDetailKey to uniqueDetailValue)
+        )
+    }
+
+    @Synchronized
     fun readAll(): List<EnforcementEventRecord> {
         val root = storeFile.readObjectOrNull() ?: return emptyList()
         val events = root.optJSONArray("events")

@@ -25,6 +25,7 @@ import com.addictionbuster.enforcement.executor.AccessibilityHomeActionPerformer
 import com.addictionbuster.enforcement.executor.EnforcementExecutor
 import com.addictionbuster.enforcement.executor.EnforcementExecutionResult
 import com.addictionbuster.enforcement.executor.OverlayActionHandler
+import com.addictionbuster.enforcement.executor.OverlaySession
 import com.addictionbuster.enforcement.executor.OverlayPermissionChecker
 import com.addictionbuster.enforcement.executor.SimpleOverlayController
 import com.addictionbuster.enforcement.health.AndroidSystemHealthReader
@@ -35,6 +36,8 @@ import com.addictionbuster.enforcement.queue.OfflineGapRecovery
 import com.addictionbuster.enforcement.queue.SingleThreadEnforcementQueue
 import com.addictionbuster.enforcement.sleep.SleepScheduleEvaluator
 import com.addictionbuster.enforcement.stats.DecisionEventRecorder
+import com.addictionbuster.enforcement.stats.SuccessfulInterceptionOutcome
+import com.addictionbuster.enforcement.stats.SuccessfulInterceptionPolicy
 import com.addictionbuster.enforcement.storage.LocalAppUsageRepository
 import com.addictionbuster.enforcement.storage.LocalEventStore
 import com.addictionbuster.enforcement.storage.LocalPassRepository
@@ -157,25 +160,17 @@ object V2AccessibilityRuntime {
             }
         }
 
-        fun enqueueOverlayAction(action: RuntimeOverlayAction) {
+        fun enqueueOverlayAction(action: RuntimeOverlayAction): Boolean =
             synchronized(ingressLock) {
                 when (action) {
-                    is RuntimeOverlayAction.Primary -> {
-                        overlayState.challengeTransitionPendingIdentityKey =
-                            action.decision.targetIdentity.identityKey
-                    }
-                    is RuntimeOverlayAction.Quit -> {
-                        val homeSent = homeActionPerformer.performHome()
-                        overlayState.quitPendingIdentityKey =
-                            action.decision.targetIdentity.identityKey.takeIf { homeSent }
-                        if (!homeSent) {
-                            overlayState.activeOverlayType = OverlayType.NONE
-                        }
-                    }
+            is RuntimeOverlayAction.Primary -> {
+                overlayState.challengeTransitionPendingIdentityKey =
+                    action.decision.targetIdentity.identityKey
+            }
+            is RuntimeOverlayAction.Quit -> Unit
                 }
                 eventProcessor.submit(RuntimeInput.Overlay(action, System.currentTimeMillis()))
             }
-        }
 
         private fun enqueueTick() {
             synchronized(ingressLock) {
@@ -410,12 +405,71 @@ object V2AccessibilityRuntime {
                     MascotSoundPlayer.playChallengePassed(service)
                 }
                 is RuntimeOverlayAction.Quit -> {
-                    passRepository.clear()
+                    var homeSent = false
+                    try {
+                    try {
+                        passRepository.clear()
+                    } catch (throwable: Throwable) {
+                        V2DiagnosticBridge.log(
+                            service,
+                            "v2",
+                            "quit pass clear failed package=${action.decision.targetIdentity.rawPackageName} session=${action.overlaySession.id} error=${throwable.message}"
+                        )
+                    }
+                    homeSent = try {
+                        homeActionPerformer.performHome()
+                    } catch (throwable: Throwable) {
+                        V2DiagnosticBridge.log(
+                            service,
+                            "v2",
+                            "overlay quit home failed package=${action.decision.targetIdentity.rawPackageName} session=${action.overlaySession.id} error=${throwable.message}"
+                        )
+                        false
+                    }
+                    overlayState.quitPendingIdentityKey =
+                        action.decision.targetIdentity.identityKey.takeIf { homeSent }
+                    if (!homeSent) {
+                        overlayState.activeOverlayType = OverlayType.NONE
+                    }
+                    if (SuccessfulInterceptionPolicy.shouldRecordOutcome(
+                            overlaySessionEligible = action.overlaySession.successfulInterceptionEligible,
+                            homeSent = homeSent
+                        )
+                    ) {
+                        try {
+                            val recorded = decisionEventRecorder.recordSuccessfulInterception(
+                                outcome = SuccessfulInterceptionOutcome(
+                                    overlaySessionId = action.overlaySession.id,
+                                    targetIdentity = action.decision.targetIdentity,
+                                    triggerAction = action.decision.action,
+                                    triggerReasonCode = action.decision.reasonCode,
+                                    overlayType = action.decision.overlayType
+                                ),
+                                occurredAtMillis = nowMillis,
+                                screenState = lastContext?.screenState ?: ScreenState.UNLOCKED,
+                                bootMarker = bootMarker
+                            )
+                            V2DiagnosticBridge.log(
+                                service,
+                                "v2",
+                                "interception succeeded package=${action.decision.targetIdentity.rawPackageName} reason=${action.decision.reasonCode} recorded=$recorded session=${action.overlaySession.id}"
+                            )
+                        } catch (throwable: Throwable) {
+                            V2DiagnosticBridge.log(
+                                service,
+                                "v2",
+                                "interception record failed package=${action.decision.targetIdentity.rawPackageName} session=${action.overlaySession.id} error=${throwable.message}"
+                            )
+                        }
+                    }
                     V2DiagnosticBridge.log(
                         service,
                         "v2",
-                        "overlay quit fail-closed-home package=${action.decision.targetIdentity.rawPackageName}"
+                        "overlay quit fail-closed-home package=${action.decision.targetIdentity.rawPackageName} homeSent=$homeSent"
                     )
+                    } finally {
+                        action.overlaySession.finishQuit(homeSent)
+                    }
                 }
             }
             lastContext?.let { last ->
@@ -803,22 +857,26 @@ object V2AccessibilityRuntime {
 
 class RuntimeExecutor(
     service: BusterAccessibilityService,
-    private val overlayActionSink: (RuntimeOverlayAction) -> Unit
+    private val overlayActionSink: (RuntimeOverlayAction) -> Boolean
 ) {
     private val homeActionPerformer = AccessibilityHomeActionPerformer(service)
     private val overlayController = SimpleOverlayController(
         context = service,
         windowType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         actionHandler = object : OverlayActionHandler {
-            override fun onPrimaryAction(decision: com.addictionbuster.enforcement.EnforcementDecision) {
+            override fun onPrimaryAction(
+                decision: com.addictionbuster.enforcement.EnforcementDecision,
+                overlaySession: OverlaySession
+            ) {
                 if (decision.action != EnforcementAction.SHOW_APP_CHALLENGE) return
                 if (decision.durationMillis <= 0L) return
-                overlayActionSink(RuntimeOverlayAction.Primary(decision))
+                overlayActionSink(RuntimeOverlayAction.Primary(decision, overlaySession))
             }
 
-            override fun onQuitAction(decision: com.addictionbuster.enforcement.EnforcementDecision) {
-                overlayActionSink(RuntimeOverlayAction.Quit(decision))
-            }
+            override fun onQuitAction(
+                decision: com.addictionbuster.enforcement.EnforcementDecision,
+                overlaySession: OverlaySession
+            ): Boolean = overlayActionSink(RuntimeOverlayAction.Quit(decision, overlaySession))
         }
     )
     private val executor = EnforcementExecutor(
@@ -876,9 +934,17 @@ private sealed interface RuntimeInput {
 
 sealed interface RuntimeOverlayAction {
     val decision: EnforcementDecision
+    val overlaySession: OverlaySession
 
-    data class Primary(override val decision: EnforcementDecision) : RuntimeOverlayAction
-    data class Quit(override val decision: EnforcementDecision) : RuntimeOverlayAction
+    data class Primary(
+        override val decision: EnforcementDecision,
+        override val overlaySession: OverlaySession
+    ) : RuntimeOverlayAction
+
+    data class Quit(
+        override val decision: EnforcementDecision,
+        override val overlaySession: OverlaySession
+    ) : RuntimeOverlayAction
 }
 
 internal fun shouldSuppressQuitPendingChallenge(

@@ -21,6 +21,8 @@ import com.addictionbuster.enforcement.AppPolicy
 import com.addictionbuster.enforcement.EnforcementAction
 import com.addictionbuster.enforcement.EnforcementContext
 import com.addictionbuster.enforcement.EnforcementDecision
+import com.addictionbuster.enforcement.stats.SuccessfulInterceptionPolicy
+import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.ceil
@@ -36,6 +38,7 @@ class SimpleOverlayController(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var currentView: View? = null
+    private var currentSessionId: String? = null
     private var countdownRunnable: Runnable? = null
     private var unhideRunnable: Runnable? = null
 
@@ -44,13 +47,20 @@ class SimpleOverlayController(
         runOnMainSynchronously {
             try {
                 removeAllOnMain()
+                val overlaySession = OverlaySession(
+                    id = UUID.randomUUID().toString(),
+                    successfulInterceptionEligible =
+                        SuccessfulInterceptionPolicy.isEligible(context, decision),
+                    removeOverlay = ::removeSession
+                )
                 val view = if (decision.action == EnforcementAction.SHOW_APP_CHALLENGE) {
-                    buildChallengeView(decision, context)
+                    buildChallengeView(decision, context, overlaySession)
                 } else {
-                    buildBlockView(decision)
+                    buildBlockView(decision, overlaySession)
                 }
                 windowManager.addView(view, layoutParams())
                 currentView = view
+                currentSessionId = overlaySession.id
                 MascotSoundPlayer.playForAction(this.context, decision.action)
                 V2DiagnosticBridge.log(
                     this.context,
@@ -77,6 +87,14 @@ class SimpleOverlayController(
         }
     }
 
+    private fun removeSession(sessionId: String) {
+        runOnMainSynchronously {
+            if (currentSessionId == sessionId) {
+                removeAllOnMain()
+            }
+        }
+    }
+
     private fun removeAllOnMain() {
         countdownRunnable?.let { mainHandler.removeCallbacks(it) }
         unhideRunnable?.let { mainHandler.removeCallbacks(it) }
@@ -87,6 +105,7 @@ class SimpleOverlayController(
             windowManager.removeView(view)
         } finally {
             currentView = null
+            currentSessionId = null
         }
     }
 
@@ -106,7 +125,7 @@ class SimpleOverlayController(
         latch.await()
     }
 
-    private fun buildBlockView(decision: EnforcementDecision): View {
+    private fun buildBlockView(decision: EnforcementDecision, overlaySession: OverlaySession): View {
         val root = rootLayout()
         root.addView(MascotUi.overlayHeader(context), matchWrap())
         root.addView(text(titleFor(decision), 26, true), matchWrap())
@@ -117,8 +136,15 @@ class SimpleOverlayController(
             isAllCaps = false
             text = "回到桌面"
             setOnClickListener {
-                actionHandler.onQuitAction(decision)
-                removeAll()
+                if (!overlaySession.tryConsume()) return@setOnClickListener
+                val accepted = try {
+                    actionHandler.onQuitAction(decision, overlaySession)
+                } catch (_: Throwable) {
+                    false
+                }
+                if (!accepted) {
+                    overlaySession.release()
+                }
             }
         }, matchWrap())
         return root
@@ -126,7 +152,8 @@ class SimpleOverlayController(
 
     private fun buildChallengeView(
         decision: EnforcementDecision,
-        context: EnforcementContext
+        context: EnforcementContext,
+        overlaySession: OverlaySession
     ): View {
         val policy = context.ruleSnapshot.requireAppPolicyFor(decision.targetIdentity.identityKey)
         val state = ChallengeState(policy)
@@ -185,8 +212,15 @@ class SimpleOverlayController(
             isAllCaps = false
             text = "算了，回到桌面"
             setOnClickListener {
-                actionHandler.onQuitAction(decision)
-                removeAll()
+                if (!overlaySession.tryConsume()) return@setOnClickListener
+                val accepted = try {
+                    actionHandler.onQuitAction(decision, overlaySession)
+                } catch (_: Throwable) {
+                    false
+                }
+                if (!accepted) {
+                    overlaySession.release()
+                }
             }
         }, matchWrap())
 
@@ -219,14 +253,14 @@ class SimpleOverlayController(
             allowShortButton.isEnabled = true
             allowShortButton.text = "允许 $shortMinutes 分钟"
             allowShortButton.setOnClickListener {
-                completeChallenge(decision, shortMinutes)
+                completeChallenge(decision, overlaySession, shortMinutes)
             }
             if (sessionMinutes > shortMinutes) {
                 allowFullButton.visibility = View.VISIBLE
                 allowFullButton.isEnabled = true
                 allowFullButton.text = "允许 $sessionMinutes 分钟"
                 allowFullButton.setOnClickListener {
-                    completeChallenge(decision, sessionMinutes)
+                    completeChallenge(decision, overlaySession, sessionMinutes)
                 }
             } else {
                 allowFullButton.visibility = View.GONE
@@ -365,9 +399,14 @@ class SimpleOverlayController(
         mainHandler.post(runnable)
     }
 
-    private fun completeChallenge(decision: EnforcementDecision, minutes: Int) {
+    private fun completeChallenge(
+        decision: EnforcementDecision,
+        overlaySession: OverlaySession,
+        minutes: Int
+    ) {
+        if (!overlaySession.tryConsume()) return
         val durationMillis = max(1, minutes).toLong() * 60_000L
-        actionHandler.onPrimaryAction(decision.copy(durationMillis = durationMillis))
+        actionHandler.onPrimaryAction(decision.copy(durationMillis = durationMillis), overlaySession)
         removeAll()
     }
 
@@ -430,11 +469,36 @@ class SimpleOverlayController(
 }
 
 interface OverlayActionHandler {
-    fun onPrimaryAction(decision: EnforcementDecision)
-    fun onQuitAction(decision: EnforcementDecision)
+    fun onPrimaryAction(decision: EnforcementDecision, overlaySession: OverlaySession)
+    fun onQuitAction(decision: EnforcementDecision, overlaySession: OverlaySession): Boolean
 
     object NoOp : OverlayActionHandler {
-        override fun onPrimaryAction(decision: EnforcementDecision) = Unit
-        override fun onQuitAction(decision: EnforcementDecision) = Unit
+        override fun onPrimaryAction(decision: EnforcementDecision, overlaySession: OverlaySession) = Unit
+        override fun onQuitAction(
+            decision: EnforcementDecision,
+            overlaySession: OverlaySession
+        ): Boolean = false
+    }
+}
+
+class OverlaySession(
+    val id: String,
+    val successfulInterceptionEligible: Boolean,
+    private val removeOverlay: (String) -> Unit = {}
+) {
+    private val consumed = AtomicBoolean(false)
+
+    fun tryConsume(): Boolean = consumed.compareAndSet(false, true)
+
+    fun release() {
+        consumed.set(false)
+    }
+
+    fun finishQuit(homeSent: Boolean) {
+        if (homeSent) {
+            removeOverlay(id)
+        } else {
+            release()
+        }
     }
 }

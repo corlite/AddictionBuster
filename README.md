@@ -123,4 +123,4 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 - 单次打开手机时长按锁屏/息屏重置，不等同于设备重启。
 - 随机移动/隐藏按钮主要由无障碍 overlay 挑战层实现，Activity fallback 路径只保留简化点击和文字确认。
 - 角色与语音功能只保存用户导入文件的 URI；如果原始文件移动或权限失效，需要重新导入。
-- 目前没有自动化测试；主要验证方式是构建加模拟器手测。
+- 已有 JVM 单元测试和 Android 存储仪器测试；核心无障碍 UI 流程仍主要依赖真机/模拟器手测。
