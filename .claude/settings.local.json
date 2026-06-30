@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "PowerShell(keytool *)",
-      "PowerShell(.\\\\gradlew assembleRelease)"
+      "PowerShell(.\\\\gradlew assembleRelease)",
+      "Bash(./gradlew --version)",
+      "Bash(export ANDROID_HOME=\"E:/Dev/Android/Sdk\")",
+      "Bash(export ANDROID_SDK_ROOT=\"E:/Dev/Android/Sdk\")",
+      "Bash(./gradlew assembleRelease)",
+      "Bash(\"E:/Dev/Android/Sdk/build-tools/35.0.0/apksigner.sh\" verify *)",
+      "Bash(E:/Dev/Android/Sdk/build-tools/35.0.0/apksigner.bat verify *)",
+      "Bash(git ls-files *)",
+      "Bash(git checkout *)",
+      "Bash(\"E:/Dev/Android/Sdk/build-tools/35.0.0/aapt2.exe\" dump *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
