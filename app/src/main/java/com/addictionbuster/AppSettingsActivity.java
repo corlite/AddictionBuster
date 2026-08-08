@@ -31,41 +31,57 @@ public class AppSettingsActivity extends Activity {
     private ScrollView buildContent() {
         LinearLayout root = UiKit.screen(this);
 
-        root.addView(UiKit.title(this, "设置"), UiKit.matchWrap());
-        root.addView(UiKit.subtitle(this, "权限、后台媒体阻断和诊断日志都在这里。"), UiKit.matchWrap());
+        root.addView(UiKit.title(this, getString(R.string.settings_title)), UiKit.matchWrap());
+        root.addView(UiKit.subtitle(this, getString(R.string.settings_subtitle)), UiKit.matchWrap());
 
         LinearLayout requiredCard = UiKit.card(this);
-        requiredCard.addView(UiKit.sectionTitle(this, "必要权限"), UiKit.matchWrap());
+        requiredCard.addView(UiKit.sectionTitle(this, getString(R.string.section_required_permissions)), UiKit.matchWrap());
         accessibilityStatusView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
-        addStatusRow(requiredCard, "无障碍拦截服务", accessibilityStatusView);
-        Button accessibilityButton = UiKit.entryButton(this, "开启无障碍拦截服务", "用于识别前台 App 并显示拦截层");
+        addStatusRow(requiredCard, getString(R.string.status_accessibility_service), accessibilityStatusView);
+        Button accessibilityButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_enable_accessibility),
+                getString(R.string.action_enable_accessibility_subtitle)
+        );
         accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
         requiredCard.addView(accessibilityButton, UiKit.spaced(this, 10));
         root.addView(requiredCard, UiKit.matchWrap());
 
         LinearLayout optionalCard = UiKit.card(this);
-        optionalCard.addView(UiKit.sectionTitle(this, "可选能力"), UiKit.matchWrap());
+        optionalCard.addView(UiKit.sectionTitle(this, getString(R.string.section_optional_capabilities)), UiKit.matchWrap());
         mediaStatusView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
-        addStatusRow(optionalCard, "后台媒体阻断", mediaStatusView);
-        Button notificationAccessButton = UiKit.entryButton(this, "开启后台媒体阻断", "尝试暂停受控应用的后台播放声音");
+        addStatusRow(optionalCard, getString(R.string.status_background_media), mediaStatusView);
+        Button notificationAccessButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_enable_background_media),
+                getString(R.string.action_enable_background_media_subtitle)
+        );
         notificationAccessButton.setOnClickListener(v -> startActivity(new Intent(this, NotificationAccessGuideActivity.class)));
         optionalCard.addView(notificationAccessButton, UiKit.spaced(this, 10));
         root.addView(optionalCard, UiKit.spaced(this, 12));
 
         LinearLayout mascotCard = UiKit.card(this);
-        mascotCard.addView(UiKit.sectionTitle(this, "角色与语音"), UiKit.matchWrap());
+        mascotCard.addView(UiKit.sectionTitle(this, getString(R.string.section_mascot_voice)), UiKit.matchWrap());
         mascotCard.addView(MascotUi.compactStatus(this), UiKit.matchWrap());
-        Button mascotButton = UiKit.entryButton(this, "角色与语音", "选择角色槽位、导入图标和语音");
+        Button mascotButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_mascot_voice),
+                getString(R.string.action_mascot_voice_subtitle)
+        );
         mascotButton.setOnClickListener(v -> startActivity(new Intent(this, MascotSettingsActivity.class)));
         mascotCard.addView(mascotButton, UiKit.spaced(this, 10));
         root.addView(mascotCard, UiKit.spaced(this, 12));
 
         LinearLayout diagnosticCard = UiKit.card(this);
-        diagnosticCard.addView(UiKit.sectionTitle(this, "诊断"), UiKit.matchWrap());
-        TextView diagnosticHint = UiKit.hint(this, "复现问题后，在诊断中心复制日志和最近关键事件。");
+        diagnosticCard.addView(UiKit.sectionTitle(this, getString(R.string.section_diagnostics)), UiKit.matchWrap());
+        TextView diagnosticHint = UiKit.hint(this, getString(R.string.diagnostic_hint));
         diagnosticHint.setPadding(0, 0, 0, UiKit.dp(this, 8));
         diagnosticCard.addView(diagnosticHint, UiKit.matchWrap());
-        Button diagnosticButton = UiKit.entryButton(this, "诊断中心", "复制日志、查看最近事件和权限状态");
+        Button diagnosticButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_diagnostic_center),
+                getString(R.string.action_diagnostic_center_subtitle)
+        );
         diagnosticButton.setOnClickListener(v -> startActivity(new Intent(this, DiagnosticActivity.class)));
         diagnosticCard.addView(diagnosticButton, UiKit.matchWrap());
         root.addView(diagnosticCard, UiKit.spaced(this, 12));
@@ -92,13 +108,13 @@ public class AppSettingsActivity extends Activity {
     private void updateStatus() {
         boolean accessibilityEnabled = isAccessibilityServiceEnabled();
         if (accessibilityStatusView != null) {
-            accessibilityStatusView.setText(accessibilityEnabled ? "已开启" : "未开启");
+            accessibilityStatusView.setText(accessibilityEnabled ? R.string.status_enabled : R.string.status_disabled);
             accessibilityStatusView.setTextColor(accessibilityEnabled ? UiKit.COLOR_SUCCESS : UiKit.COLOR_DANGER);
         }
 
         boolean mediaEnabled = isNotificationListenerEnabled();
         if (mediaStatusView != null) {
-            mediaStatusView.setText(mediaEnabled ? "已开启" : "未开启");
+            mediaStatusView.setText(mediaEnabled ? R.string.status_enabled : R.string.status_disabled);
             mediaStatusView.setTextColor(mediaEnabled ? UiKit.COLOR_SUCCESS : UiKit.COLOR_DANGER);
         }
 

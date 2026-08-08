@@ -143,7 +143,7 @@ Android instrumentation tests require an emulator or device:
 - Collect real-device feedback for `v0.3.1`.
 - Add tested-device notes from real users.
 - Collect more Xiaomi / HyperOS accessibility reliability reports.
-- Add English localization for the Android UI.
+- Complete English localization beyond the main dashboard and settings screens.
 - Add scheduled blocking rules.
 - Expand automated tests around accessibility and usage accounting.
 

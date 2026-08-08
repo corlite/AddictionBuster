@@ -129,7 +129,7 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 - 收集 `v0.3.1` 真机反馈。
 - 添加真实用户已测试设备说明。
 - 收集更多 Xiaomi / HyperOS 无障碍稳定性反馈。
-- 增加 Android UI 英文国际化。
+- 继续补全主界面和设置页之外的 Android UI 英文国际化。
 - 增加按日程生效的拦截规则。
 - 扩展无障碍与时长统计相关自动化测试。
 

@@ -53,48 +53,68 @@ public class MainActivity extends Activity {
         LinearLayout root = UiKit.screen(this);
 
         root.addView(UiKit.title(this, getString(R.string.app_name)), UiKit.matchWrap());
-        root.addView(UiKit.subtitle(this, "今日先挡住入口，别急着靠意志力硬扛。"), UiKit.matchWrap());
+        root.addView(UiKit.subtitle(this, getString(R.string.main_subtitle)), UiKit.matchWrap());
 
         LinearLayout statusCard = UiKit.card(this);
-        statusCard.addView(UiKit.sectionTitle(this, "今日状态"), UiKit.matchWrap());
+        statusCard.addView(UiKit.sectionTitle(this, getString(R.string.section_today_status)), UiKit.matchWrap());
         statusCard.addView(MascotUi.compactStatus(this), UiKit.matchWrap());
         selectedCountView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
         phoneUsageView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
         eventCountView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
         serviceStatusView = UiKit.text(this, "", 15, UiKit.COLOR_TEXT, true);
-        addStatusRow(statusCard, "已管控应用", selectedCountView);
-        addStatusRow(statusCard, "今日手机时长", phoneUsageView);
-        addStatusRow(statusCard, "今日拦截事件", eventCountView);
-        addStatusRow(statusCard, "服务状态", serviceStatusView);
+        addStatusRow(statusCard, getString(R.string.status_controlled_apps), selectedCountView);
+        addStatusRow(statusCard, getString(R.string.status_phone_usage_today), phoneUsageView);
+        addStatusRow(statusCard, getString(R.string.status_block_events_today), eventCountView);
+        addStatusRow(statusCard, getString(R.string.status_service), serviceStatusView);
         root.addView(statusCard, UiKit.matchWrap());
 
-        root.addView(UiKit.sectionTitle(this, "管控应用"), UiKit.spaced(this, 20));
+        root.addView(UiKit.sectionTitle(this, getString(R.string.section_controlled_apps)), UiKit.spaced(this, 20));
 
-        Button activeAppsButton = UiKit.entryButton(this, "已管控应用", "查看和修改已经启用的应用");
+        Button activeAppsButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_active_apps),
+                getString(R.string.action_active_apps_subtitle)
+        );
         activeAppsButton.setOnClickListener(v -> startActivity(new Intent(this, ActiveAppsActivity.class)));
         root.addView(activeAppsButton, UiKit.matchWrap());
 
-        Button addAppsButton = UiKit.entryButton(this, "添加应用", "搜索并添加新的管控应用");
+        Button addAppsButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_add_apps),
+                getString(R.string.action_add_apps_subtitle)
+        );
         addAppsButton.setOnClickListener(v -> startActivity(new Intent(this, AddAppActivity.class)));
         root.addView(addAppsButton, UiKit.spaced(this, 10));
 
-        root.addView(UiKit.sectionTitle(this, "时长与报告"), UiKit.spaced(this, 20));
+        root.addView(UiKit.sectionTitle(this, getString(R.string.section_time_reports)), UiKit.spaced(this, 20));
 
-        Button phoneLimitButton = UiKit.entryButton(this, "手机时长限制", "设置每日总时长、单次打开手机时长和白名单");
+        Button phoneLimitButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_phone_limit),
+                getString(R.string.action_phone_limit_subtitle)
+        );
         phoneLimitButton.setOnClickListener(v -> startActivity(new Intent(this, PhoneLimitActivity.class)));
         root.addView(phoneLimitButton, UiKit.matchWrap());
 
-        Button statsButton = UiKit.entryButton(this, "今日报告", "查看今日时长、拦截事件和 App 用量");
+        Button statsButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_today_report),
+                getString(R.string.action_today_report_subtitle)
+        );
         statsButton.setOnClickListener(v -> startActivity(new Intent(this, StatsActivity.class)));
         root.addView(statsButton, UiKit.spaced(this, 10));
 
-        root.addView(UiKit.sectionTitle(this, "系统"), UiKit.spaced(this, 20));
+        root.addView(UiKit.sectionTitle(this, getString(R.string.section_system)), UiKit.spaced(this, 20));
 
-        Button settingsButton = UiKit.entryButton(this, "设置", "权限、诊断和后台媒体");
+        Button settingsButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_settings),
+                getString(R.string.action_settings_subtitle)
+        );
         settingsButton.setOnClickListener(v -> startActivity(new Intent(this, AppSettingsActivity.class)));
         root.addView(settingsButton, UiKit.matchWrap());
 
-        TextView hint = UiKit.hint(this, "前台拦截依赖无障碍服务；后台媒体阻断需要通知使用权。");
+        TextView hint = UiKit.hint(this, getString(R.string.main_permission_hint));
         hint.setPadding(0, UiKit.dp(this, 18), 0, 0);
         root.addView(hint, UiKit.matchWrap());
 
@@ -124,7 +144,7 @@ public class MainActivity extends Activity {
             return;
         }
         int count = RuleStore.getBlockedPackages(this).size();
-        selectedCountView.setText(count + " 个");
+        selectedCountView.setText(getString(R.string.count_apps_format, count));
 
         try {
             DailyStatsSnapshot snapshot = new EnforcementStatsAggregator(
@@ -134,20 +154,20 @@ public class MainActivity extends Activity {
                     ZoneId.systemDefault()
             ).dailySnapshot(LocalDate.now(ZoneId.systemDefault()).toString());
             phoneUsageView.setText(formatDuration(snapshot.getPhoneUsage().getDailyUsedMillis()));
-            eventCountView.setText(snapshot.getEventStats().getBlockEvents() + " 次");
+            eventCountView.setText(getString(R.string.count_events_format, snapshot.getEventStats().getBlockEvents()));
         } catch (RuntimeException exception) {
-            phoneUsageView.setText("暂不可用");
-            eventCountView.setText("暂不可用");
+            phoneUsageView.setText(R.string.status_unavailable);
+            eventCountView.setText(R.string.status_unavailable);
         }
 
         if (V2InitializationGate.requiresSetup(this)) {
-            serviceStatusView.setText("需初始化");
+            serviceStatusView.setText(R.string.service_requires_setup);
             serviceStatusView.setTextColor(UiKit.COLOR_DANGER);
         } else if (isAccessibilityServiceEnabled()) {
-            serviceStatusView.setText("正常");
+            serviceStatusView.setText(R.string.service_ok);
             serviceStatusView.setTextColor(UiKit.COLOR_SUCCESS);
         } else {
-            serviceStatusView.setText("需开启无障碍");
+            serviceStatusView.setText(R.string.service_requires_accessibility);
             serviceStatusView.setTextColor(UiKit.COLOR_DANGER);
         }
     }
@@ -182,11 +202,11 @@ public class MainActivity extends Activity {
         long minutes = (totalSeconds % 3600L) / 60L;
         long seconds = totalSeconds % 60L;
         if (hours > 0L) {
-            return hours + "小时" + minutes + "分钟";
+            return getString(R.string.duration_hours_minutes_format, hours, minutes);
         }
         if (minutes > 0L) {
-            return minutes + "分钟" + seconds + "秒";
+            return getString(R.string.duration_minutes_seconds_format, minutes, seconds);
         }
-        return seconds + "秒";
+        return getString(R.string.duration_seconds_format, seconds);
     }
 }
