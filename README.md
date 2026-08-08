@@ -69,6 +69,8 @@ See [PRIVACY.md](PRIVACY.md) for the exact data handling policy.
 
 For Android version support, tested environments, and OEM-specific troubleshooting, see [Device Compatibility](docs/device-compatibility.md) and [OEM Troubleshooting](docs/oem-troubleshooting.md).
 
+Real-device testers can follow the [Testing Guide](docs/testing-guide.md) and report results with the [device compatibility template](https://github.com/corlite/AddictionBuster/issues/new?template=device_compatibility.md).
+
 ## Install
 
 Download the latest APK from GitHub Releases:

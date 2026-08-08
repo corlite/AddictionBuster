@@ -64,6 +64,8 @@ Release 中包含：
 
 Android 版本支持、已测试环境和 OEM 排查说明见：[Device Compatibility](docs/device-compatibility.md) 与 [OEM Troubleshooting](docs/oem-troubleshooting.md)。
 
+真机测试者可以按照 [Testing Guide](docs/testing-guide.md) 操作，并用 [device compatibility template](https://github.com/corlite/AddictionBuster/issues/new?template=device_compatibility.md) 反馈结果。
+
 ## 构建
 
 ```powershell

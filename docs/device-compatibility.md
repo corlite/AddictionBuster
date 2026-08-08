@@ -35,6 +35,8 @@ The following areas still need real-device reports before the project can claim 
 | Samsung One UI | Medium | Generally stable, but battery optimization settings still matter. |
 | Pixel / AOSP-like builds | Medium | Useful baseline for debugging OEM-specific behavior. |
 
+See [Real-Device Testing Guide](testing-guide.md) for the exact testing flow.
+
 ## Feedback Template
 
 When reporting device compatibility, include:
