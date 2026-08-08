@@ -1,126 +1,141 @@
-# 瘾头破坏器
+# AddictionBuster
 
-AddictionBuster 的中文名是“瘾头破坏器”。这是一个 Android 戒断工具，用无障碍服务在冲动打开应用前插入停顿、挑战和时长限制。
+[简体中文](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
-当前版本：0.2.9
+AddictionBuster is an open-source Android digital wellbeing tool for interrupting compulsive app-opening loops.
 
-本地测试 APK：`dist/瘾头破坏器0.2.9-vc29-release-mascot-voice-slots-debugkey.apk`
+Instead of only blocking apps, AddictionBuster adds intentional friction before access: waiting periods, interaction challenges, confirmation prompts, per-session limits, daily budgets, phone-wide usage limits, whitelists, media blocking, and diagnostic logs.
 
-1. 主页分为“生效应用 / 增加应用 / 手机时长限制 / 设置”
-2. 支持搜索应用名或包名，打开右侧开关后进入单应用规则设置
-3. 打开目标 App 时用无障碍 overlay 拦截
-4. 按单应用规则执行等待、互动点击、按钮隐藏、文字确认
-5. 挑战完成后按本次上限和每日额度放行，到期仍在前台会自动回桌面
-6. 支持手机级每日总时长限制，统计非白名单前台 App 使用时间
-7. 支持单次打开手机时长限制，锁屏后重新计算
-8. 支持选择手机时长白名单 App，白名单不计时、不被手机时长限制拦截
-9. 支持角色与语音坑位：咕嘎、Doro、自定义槽位可导入 App 内图标和 9 条场景语音
+```text
+Don't block the impulse. Interrupt it.
+```
 
-功能触发示意图见：[docs/功能触发示意图.md](docs/功能触发示意图.md)。
-简短测试清单见：[docs/测试清单与已知限制.md](docs/测试清单与已知限制.md)。
-角色素材说明见：[docs/角色图标与语音使用说明.md](docs/角色图标与语音使用说明.md)。
+## Status
 
-## 构建
+Current source version: `0.3.1`
+
+The project is early but usable. It is currently distributed as source code and APK artifacts while the first formal GitHub Release is being prepared.
+
+## Why AddictionBuster?
+
+Many app blockers focus on hard denial. AddictionBuster focuses on the moment before access:
+
+```text
+Impulse to open an app
+→ Full-screen intervention
+→ Wait or complete a challenge
+→ Confirm the intention
+→ Temporary access
+→ Automatic return home when time expires
+```
+
+This makes it useful for people who want a pause, not just a wall.
+
+## Features
+
+- Choose which launcher apps should be controlled.
+- Configure per-app daily budgets and per-session limits.
+- Add waiting periods before a controlled app opens.
+- Require interaction challenges, hidden buttons, or text confirmation.
+- Temporarily allow access after a challenge succeeds.
+- Return to the home screen when the allowed session expires.
+- Set phone-wide daily and per-unlock usage limits.
+- Exclude selected apps with a phone usage whitelist.
+- Pause background media from controlled apps when notification access is enabled.
+- Keep a local diagnostic log for troubleshooting accessibility and timing issues.
+- Configure mascot icon and voice slots with user-imported local media.
+
+## Permissions
+
+AddictionBuster uses sensitive Android capabilities because app-level intervention cannot work as a normal foreground-only screen.
+
+- Accessibility Service: detects foreground window changes and performs the home action when a limit expires.
+- Display over other apps: shows the full-screen intervention overlay.
+- Notification access: allows optional background media blocking through active media sessions.
+- Notifications / foreground service: keeps enforcement visible while the app is monitoring usage.
+
+See [PRIVACY.md](PRIVACY.md) for the exact data handling policy.
+
+## Install
+
+Until the first formal GitHub Release is published, build from source or use the APK artifacts in this repository with care. A signed APK and SHA-256 checksum will be published through GitHub Releases as part of the open-source launch.
+
+After installing:
+
+1. Open AddictionBuster.
+2. Go to Settings and enable the accessibility service.
+3. Optional: enable notification access for background media blocking.
+4. Add controlled apps.
+5. Configure limits and challenges.
+6. Open a controlled app to test the intervention flow.
+
+## Build
+
+Requirements:
+
+- Android Studio or Android SDK
+- JDK 17
+- Android SDK 35
+
+Windows PowerShell example:
 
 ```powershell
 $env:ANDROID_HOME='E:\Dev\Android\Sdk'
 .\gradlew.bat assembleDebug
 ```
 
-APK 路径：
+Unix-like shell example:
+
+```bash
+./gradlew assembleDebug
+```
+
+Debug APK path:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## 手机测试
+## Test
 
-1. 安装 APK。
-2. 打开“瘾头破坏器”，进入“设置”，开启无障碍拦截服务。
-3. 如需后台媒体阻断，点击“开启后台媒体阻断”，先阅读说明页，再进入系统通知使用权设置。
-4. 回到主页，进入“增加应用”，搜索并打开目标应用右侧开关。
-5. 在规则页设置每日额度、本次上限、等待秒数、互动点击次数、隐藏规则和文字确认，然后保存。
-6. 打开刚才启用的应用，应该先进入拦截 overlay，并按规则完成挑战。
-7. 点击放行按钮后应该进入目标应用；放行期间短暂切桌面或系统浮层不应立刻重新拦截。
-8. 本次上限到期后，如果目标应用仍在前台，应该自动回桌面；再次打开会重新触发拦截。
-9. 如果限制 App 在未放行时退到后台继续播放声音，后台媒体阻断会尝试暂停播放。
-10. 回到主页，进入“手机时长限制”，设置每日总时长和单次打开手机时长；填 0 表示关闭对应限制。
-11. 进入“选择白名单应用”，打开不想计入手机总时长的应用开关。
-12. 打开非白名单 App，使用时间超过每日总时长或单次打开手机时长后，会出现“手机时长已到”的拦截层。
-13. 如需角色提示，进入“设置 / 角色与语音”，选择槽位并导入 1 个图标和 9 条场景语音。
-
-## MVP 测试清单
-
-- 构建：`.\gradlew.bat assembleDebug` 成功生成 debug APK。
-- 安装：APK 可安装到 Android 模拟器或真机。
-- 首次使用：主页展示“生效应用 / 增加应用 / 手机时长限制 / 设置”四个入口。
-- 增加应用：搜索框可按应用名或包名过滤 launcher apps，右侧胶囊开关可启用/停用拦截。
-- 规则设置：启用应用后进入规则页，可保存每日额度、本次上限、等待、互动点击、隐藏和文字确认。
-- 无障碍：用户开启“瘾头破坏器拦截服务”后，打开被限制 App 会弹出挑战页。
-- 通知访问：用户开启“瘾头破坏器后台媒体阻断”后，后台媒体会话可被检测并尝试暂停。
-- 放行：挑战结束后按规则中的本次上限和今日剩余额度临时放行当前目标 App。
-- 自动踢出：放行到期时，如果目标应用仍在前台，会执行回桌面。
-- 复拦截：放行到期后再次打开目标应用，会重新触发挑战。
-- 手机每日总时长：设置每日总时长后，非白名单前台 App 会累计到手机总时长。
-- 单次打开手机时长：设置单次时长后，每次解锁后的非白名单前台使用会单独累计，锁屏后重置。
-- 白名单：白名单 App 不计入手机总时长，也不会被手机时长限制拦截。
-
-## 诊断日志
-
-如果真机上无法拦截，先按下面流程取日志：
-
-1. 打开“瘾头破坏器”。
-2. 点击“诊断中心”，先清空日志。
-3. 确认已经勾选要限制的 App，并且系统无障碍里已经开启“瘾头破坏器拦截服务”。
-4. 打开目标 App，复现一次“没有被拦截”的问题。
-5. 回到“瘾头破坏器”，点击“诊断中心”。
-6. 复制或分享最后几十行日志，重点看 `service`、`event`、`challenge` 行。
-
-也可以用 ADB 获取日志：
-
-```powershell
-adb logcat -d -s AddictionBuster:I AndroidRuntime:E ActivityTaskManager:W
-adb shell run-as com.addictionbuster.app cat files/diagnostic.log
+```bash
+./gradlew test
 ```
 
-如果日志里完全没有 `[service] connected` 或 `[event] window type=... package=...`，通常说明无障碍服务没有真正运行，或系统/OEM 后台限制把服务停掉了。如果有 `event` 但 `blocked=false`，说明命中的包名和勾选保存的包名不一致。如果有 `launch challenge` 但没有看到挑战页，再看后面的错误行和系统 `ActivityTaskManager` 输出。
+Android instrumentation tests require an emulator or device:
 
-0.1.2 起，命中限制 App 后优先由无障碍服务显示全屏 overlay 挑战层，不再完全依赖从后台启动 ChallengeActivity。日志中出现 `[challenge] show overlay ...` 表示 overlay 已创建；如果出现 `failed to show overlay`，会继续尝试旧的 Activity 兜底路径。
+```bash
+./gradlew connectedDebugAndroidTest
+```
 
-0.1.3 起，挑战完成后可选择放行 5 分钟或 10 分钟。放行期间不会因为短暂切到桌面、系统浮层或同一个目标 App 内部 Activity 切换而马上重新拦截。
+## Known Limitations
 
-0.1.4 起，增加后台媒体播放阻断。用户开启通知访问后，被限制 App 没有处在 5/10 分钟放行窗口内时，如果它退到后台继续播放音频，服务会通过媒体会话尝试暂停，并在日志中记录 `[media] pause blocked media ...`。
+- Accessibility services must be enabled manually by the user.
+- OEM background restrictions can stop or delay accessibility events.
+- The app cannot freeze or force-stop other apps.
+- Background media blocking is best-effort and depends on Android media sessions.
+- Phone usage accounting depends on accessibility events and service uptime.
+- Rules and logs are local only; there is no account system or cloud sync.
+- Core accessibility flows still need more device testing.
 
-0.1.5 起，主页改为三入口结构，增加应用搜索、单应用规则设置、每日额度、本次上限、移动按钮/隐藏按钮/文字确认挑战，以及放行到期后仍在前台时自动回桌面。
+## Roadmap
 
-0.1.6 起，统一主页三个入口按钮字号；生效应用页增加“增加应用”入口；生效应用和增加应用列表改为“图标 + 应用名”，不再显示包名。
+- Publish a formal `v0.3.1` GitHub Release.
+- Add Android CI for pull requests.
+- Add screenshots and tested-device notes.
+- Improve Xiaomi / HyperOS accessibility reliability guidance.
+- Add English localization for the Android UI.
+- Add scheduled blocking rules.
+- Expand automated tests around accessibility and usage accounting.
 
-0.1.7 起，诊断日志改为诊断中心：顶部显示版本、权限、生效应用和最近关键事件；主按钮为“发送诊断给开发者”；高级日志支持最近 30 分钟/1 小时查看；日志自动保留最近 1 小时并定时清理。
+## Maintainer
 
-0.1.8 起，生效应用页的“增加应用”移动到标题下方并使用同等字号蓝色展示；增加应用页拆分左侧应用区域和右侧开关，已开启应用点左侧只进入规则设置，只有点右侧开关才会停用；规则页顶部增加首次使用权限指引。
+AddictionBuster is primarily developed and maintained by [@corlite](https://github.com/corlite).
 
-0.1.9 起，规则页把“拦截规则”放大为主标题，应用名称缩小；规则页右上角增加“保存”入口；生效应用页的“增加应用”移动到列表下方，只保留蓝色文字跳转。
+## Contributing
 
-0.2.0 起，增加手机时长限制：支持每日总时长、单次打开手机时长、白名单应用选择；无障碍服务持续统计非白名单前台 App，超时后显示“手机时长已到”拦截层；诊断中心同步展示手机时长配置、今日已统计时长和白名单数量。
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
 
-0.2.1 起，修复手机时长到期后点击“回到桌面”仍被继续拦截的问题：系统当前桌面会动态识别为手机时长白名单，不再依赖机型包名兜底。
+## License
 
-0.2.2 起，增加应用和白名单应用列表会把已选中的应用排在前面，未选应用继续保持原有应用顺序；这只是显示顺序调整，不做吸顶，列表滚动时已选应用会一起滚动。
-
-0.2.8 起，增加角色与语音坑位：咕嘎、Doro、自定义槽位可分别导入 App 内角色图标和场景语音；APK 不内置任何第三方角色素材。
-
-0.2.9 起，角色语音扩展为 9 条独立槽位：拦截出现、挑战通过、手机时长到、权限异常、管控应用、已管控应用、添加应用、今日报告、拦截规则。语音不复用，图标可以复用。
-
-## 已知限制
-
-- 目前仍是 MVP，没有规则组、日程、网页拦截、云同步或账号体系。
-- 无障碍服务需要用户手动在系统设置里开启；调试时可用 ADB 写入 secure settings。
-- 规则只保存在本机 SharedPreferences，没有云同步和账号体系。
-- 选择 App 页面只列出 launcher apps，暂不支持系统应用高级筛选。
-- 普通 APK 不能真正冻结或强停其他 App；当前最接近的后台阻断是检测被限制 App 的后台音频播放并尝试发送暂停。
-- 自动踢出是通过无障碍服务执行回桌面，不是冻结进程；目标 App 后台进程可能仍存在。
-- 手机总时长和单次打开手机时长依赖无障碍前台窗口事件与服务运行状态；如果系统杀掉无障碍服务，统计和拦截会暂停。
-- 单次打开手机时长按锁屏/息屏重置，不等同于设备重启。
-- 随机移动/隐藏按钮主要由无障碍 overlay 挑战层实现，Activity fallback 路径只保留简化点击和文字确认。
-- 角色与语音功能只保存用户导入文件的 URI；如果原始文件移动或权限失效，需要重新导入。
-- 已有 JVM 单元测试和 Android 存储仪器测试；核心无障碍 UI 流程仍主要依赖真机/模拟器手测。
+AddictionBuster is released under the [MIT License](LICENSE).
