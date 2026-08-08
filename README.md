@@ -144,7 +144,7 @@ Android instrumentation tests require an emulator or device:
 - Add tested-device notes from real users.
 - Collect more Xiaomi / HyperOS accessibility reliability reports.
 - Complete English localization beyond the main dashboard and settings screens.
-- Add scheduled blocking rules.
+- Expose scheduled blocking rules in the Android UI.
 - Expand automated tests around accessibility and usage accounting.
 
 ## Maintainer
