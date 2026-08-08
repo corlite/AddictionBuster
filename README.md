@@ -2,7 +2,7 @@
 
 [![Android CI](https://github.com/corlite/AddictionBuster/actions/workflows/android-ci.yml/badge.svg)](https://github.com/corlite/AddictionBuster/actions/workflows/android-ci.yml)
 
-[简体中文](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
+[简体中文](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Compatibility](docs/device-compatibility.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
 AddictionBuster is an open-source Android digital wellbeing tool for interrupting compulsive app-opening loops.
 
@@ -57,6 +57,8 @@ AddictionBuster uses sensitive Android capabilities because app-level interventi
 - Notifications / foreground service: keeps enforcement visible while the app is monitoring usage.
 
 See [PRIVACY.md](PRIVACY.md) for the exact data handling policy.
+
+For Android version support, tested environments, and OEM-specific troubleshooting, see [Device Compatibility](docs/device-compatibility.md) and [OEM Troubleshooting](docs/oem-troubleshooting.md).
 
 ## Install
 
@@ -131,8 +133,7 @@ Android instrumentation tests require an emulator or device:
 
 - Collect real-device feedback for `v0.3.1`.
 - Add screenshots and tested-device notes.
-- Improve release verification and signing documentation.
-- Improve Xiaomi / HyperOS accessibility reliability guidance.
+- Collect more Xiaomi / HyperOS accessibility reliability reports.
 - Add English localization for the Android UI.
 - Add scheduled blocking rules.
 - Expand automated tests around accessibility and usage accounting.

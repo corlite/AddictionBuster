@@ -2,7 +2,7 @@
 
 [![Android CI](https://github.com/corlite/AddictionBuster/actions/workflows/android-ci.yml/badge.svg)](https://github.com/corlite/AddictionBuster/actions/workflows/android-ci.yml)
 
-[English](README.md) · [隐私](PRIVACY.md) · [安全](SECURITY.md) · [贡献](CONTRIBUTING.md) · [许可证](LICENSE)
+[English](README.md) · [隐私](PRIVACY.md) · [安全](SECURITY.md) · [兼容性](docs/device-compatibility.md) · [贡献](CONTRIBUTING.md) · [许可证](LICENSE)
 
 AddictionBuster 的中文名是“瘾头破坏器”。这是一个开源 Android 数字健康工具，用无障碍服务在冲动打开应用前插入停顿、挑战和时长限制。
 
@@ -52,6 +52,8 @@ Release 中包含：
 - 通知和前台服务：用于保持管控服务可见和运行。
 
 详细隐私说明见：[PRIVACY.md](PRIVACY.md)。
+
+Android 版本支持、已测试环境和 OEM 排查说明见：[Device Compatibility](docs/device-compatibility.md) 与 [OEM Troubleshooting](docs/oem-troubleshooting.md)。
 
 ## 构建
 
@@ -117,8 +119,7 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 
 - 收集 `v0.3.1` 真机反馈。
 - 添加截图和已测试设备说明。
-- 改进 release 校验和签名流程文档。
-- 改进 Xiaomi / HyperOS 无障碍稳定性指引。
+- 收集更多 Xiaomi / HyperOS 无障碍稳定性反馈。
 - 增加 Android UI 英文国际化。
 - 增加按日程生效的拦截规则。
 - 扩展无障碍与时长统计相关自动化测试。

@@ -2,6 +2,8 @@
 
 AddictionBuster uses sensitive Android capabilities such as Accessibility Service, overlay windows, notification access, and foreground services. Security reports are taken seriously.
 
+For the current Android permission and exported-component review, see [docs/security-audit.md](docs/security-audit.md).
+
 ## Supported Versions
 
 The project is pre-1.0. Security fixes are generally made on the `main` branch and included in the next release.
