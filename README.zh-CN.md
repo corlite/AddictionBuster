@@ -23,6 +23,15 @@ AddictionBuster 的中文名是“瘾头破坏器”。这是一个开源 Androi
 
 [下载 AddictionBuster v0.3.1](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.1)
 
+## 截图
+
+<p>
+  <img src="docs/screenshots/setup-screen.png" alt="初始化页面" width="220">
+  <img src="docs/screenshots/main-screen.png" alt="主界面" width="220">
+  <img src="docs/screenshots/add-app-screen.png" alt="添加应用" width="220">
+  <img src="docs/screenshots/settings-screen.png" alt="设置页面" width="220">
+</p>
+
 Release 中包含：
 
 - `AddictionBuster-v0.3.1.apk`
@@ -118,7 +127,7 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 ## 下一步
 
 - 收集 `v0.3.1` 真机反馈。
-- 添加截图和已测试设备说明。
+- 添加真实用户已测试设备说明。
 - 收集更多 Xiaomi / HyperOS 无障碍稳定性反馈。
 - 增加 Android UI 英文国际化。
 - 增加按日程生效的拦截规则。

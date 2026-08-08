@@ -12,6 +12,15 @@ Instead of only blocking apps, AddictionBuster adds intentional friction before 
 Don't block the impulse. Interrupt it.
 ```
 
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/setup-screen.png" alt="Setup screen" width="220">
+  <img src="docs/screenshots/main-screen.png" alt="Main dashboard" width="220">
+  <img src="docs/screenshots/add-app-screen.png" alt="Add controlled app" width="220">
+  <img src="docs/screenshots/settings-screen.png" alt="Settings screen" width="220">
+</p>
+
 ## Status
 
 Current source version: `0.3.1`
@@ -132,7 +141,7 @@ Android instrumentation tests require an emulator or device:
 ## Roadmap
 
 - Collect real-device feedback for `v0.3.1`.
-- Add screenshots and tested-device notes.
+- Add tested-device notes from real users.
 - Collect more Xiaomi / HyperOS accessibility reliability reports.
 - Add English localization for the Android UI.
 - Add scheduled blocking rules.
