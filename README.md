@@ -14,7 +14,7 @@ Don't block the impulse. Interrupt it.
 
 Current source version: `0.3.1`
 
-The project is early but usable. It is currently distributed as source code and APK artifacts while the first formal GitHub Release is being prepared.
+The project is early but usable. The first formal GitHub Release is available as `v0.3.1`.
 
 ## Why AddictionBuster?
 
@@ -58,7 +58,14 @@ See [PRIVACY.md](PRIVACY.md) for the exact data handling policy.
 
 ## Install
 
-Until the first formal GitHub Release is published, build from source or use the APK artifacts in this repository with care. A signed APK and SHA-256 checksum will be published through GitHub Releases as part of the open-source launch.
+Download the latest APK from GitHub Releases:
+
+[Download AddictionBuster v0.3.1](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.1)
+
+The release includes:
+
+- `AddictionBuster-v0.3.1.apk`
+- `SHA256SUMS.txt`
 
 After installing:
 

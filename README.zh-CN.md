@@ -17,6 +17,15 @@ AddictionBuster 的中文名是“瘾头破坏器”。这是一个开源 Androi
 
 当前源码版本：`0.3.1`
 
+正式下载地址：
+
+[下载 AddictionBuster v0.3.1](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.1)
+
+Release 中包含：
+
+- `AddictionBuster-v0.3.1.apk`
+- `SHA256SUMS.txt`
+
 ## 功能
 
 1. 主页分为“生效应用 / 增加应用 / 手机时长限制 / 设置”。
