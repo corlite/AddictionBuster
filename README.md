@@ -1,5 +1,7 @@
 # AddictionBuster
 
+[![Android CI](https://github.com/corlite/AddictionBuster/actions/workflows/android-ci.yml/badge.svg)](https://github.com/corlite/AddictionBuster/actions/workflows/android-ci.yml)
+
 [简体中文](README.zh-CN.md) · [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [License](LICENSE)
 
 AddictionBuster is an open-source Android digital wellbeing tool for interrupting compulsive app-opening loops.
@@ -127,9 +129,9 @@ Android instrumentation tests require an emulator or device:
 
 ## Roadmap
 
-- Publish a formal `v0.3.1` GitHub Release.
-- Add Android CI for pull requests.
+- Collect real-device feedback for `v0.3.1`.
 - Add screenshots and tested-device notes.
+- Improve release verification and signing documentation.
 - Improve Xiaomi / HyperOS accessibility reliability guidance.
 - Add English localization for the Android UI.
 - Add scheduled blocking rules.

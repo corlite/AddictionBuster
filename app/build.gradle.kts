@@ -1,3 +1,25 @@
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val propertiesFile = rootProject.file("local.properties")
+    if (propertiesFile.isFile) {
+        propertiesFile.inputStream().use(::load)
+    }
+}
+
+fun signingSecret(name: String): String? =
+    (localProperties.getProperty(name) ?: System.getenv(name))?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingSecret("ADDICTIONBUSTER_RELEASE_STORE_FILE")
+val releaseStorePassword = signingSecret("ADDICTIONBUSTER_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = signingSecret("ADDICTIONBUSTER_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingSecret("ADDICTIONBUSTER_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning =
+    releaseStoreFile != null &&
+        releaseStorePassword != null &&
+        releaseKeyAlias != null &&
+        releaseKeyPassword != null
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,11 +44,13 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file("../release.keystore")
-            storePassword = "addictionbuster"
-            keyAlias = "addictionbuster"
-            keyPassword = "addictionbuster"
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
         }
     }
 
@@ -36,7 +60,9 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
