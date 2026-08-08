@@ -158,7 +158,7 @@ public class MascotSettingsActivity extends Activity {
         }
         if (iconPathView != null) {
             String iconUri = MascotStore.getIconUri(this, profile);
-            iconPathView.setText(iconUri.isEmpty() ? "当前槽位还没有图标。" : "图标：" + iconUri);
+            iconPathView.setText(iconUri.isEmpty() ? "当前槽位还没有图标。" : "图标已导入。");
         }
         if (volumeView != null) {
             volumeView.setText("音量：" + MascotStore.getVolumePercent(this) + "%");
@@ -212,7 +212,7 @@ public class MascotSettingsActivity extends Activity {
 
     private String voiceUriText(MascotVoiceSlot slot) {
         String voiceUri = MascotStore.getVoiceUri(this, MascotStore.getProfile(this), slot);
-        return voiceUri.isEmpty() ? "未导入：" + slot.displayName() : "已导入：" + voiceUri;
+        return voiceUri.isEmpty() ? "未导入：" + slot.displayName() : "已导入：" + slot.displayName();
     }
 
     private int requestCodeFor(MascotVoiceSlot slot) {

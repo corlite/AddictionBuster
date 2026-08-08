@@ -30,6 +30,7 @@ AddictionBuster is local-first:
 - Usage state is stored on the device.
 - Diagnostic logs are stored on the device.
 - Mascot media slots store local URI references.
+- Mascot settings display imported/not-imported status instead of full `content://` URI strings.
 - There is no account system, analytics backend, or cloud sync in the current release.
 
 See [PRIVACY.md](../PRIVACY.md) for the user-facing privacy policy.
