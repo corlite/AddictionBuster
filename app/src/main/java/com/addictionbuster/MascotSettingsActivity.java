@@ -188,11 +188,12 @@ public class MascotSettingsActivity extends Activity {
             return;
         }
         Uri uri = data.getData();
-        int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
-        try {
-            getContentResolver().takePersistableUriPermission(uri, flags);
-        } catch (SecurityException exception) {
-            DiagnosticLogger.log(this, "mascot", "persist uri permission failed error=" + exception.getMessage());
+        if ((data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0) {
+            try {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (SecurityException exception) {
+                DiagnosticLogger.log(this, "mascot", "persist uri permission failed error=" + exception.getMessage());
+            }
         }
 
         MascotProfile profile = MascotStore.getProfile(this);
