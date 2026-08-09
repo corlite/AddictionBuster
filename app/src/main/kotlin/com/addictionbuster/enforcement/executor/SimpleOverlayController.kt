@@ -17,6 +17,7 @@ import android.widget.TextView
 import com.addictionbuster.MascotSoundPlayer
 import com.addictionbuster.MascotUi
 import com.addictionbuster.V2DiagnosticBridge
+import com.addictionbuster.V2TextConfirmActivity
 import com.addictionbuster.enforcement.AppPolicy
 import com.addictionbuster.enforcement.EnforcementAction
 import com.addictionbuster.enforcement.EnforcementContext
@@ -278,6 +279,10 @@ class SimpleOverlayController(
                 enableContinueButtons()
                 return
             }
+            if (tryLaunchTextConfirmActivity(decision, policy)) {
+                removeSession(overlaySession.id)
+                return
+            }
             messageView.text = "输入确认文字，给自己一个清醒的停顿。"
             confirmInput.hint = "请输入：${policy.challengeConfirmText}"
             confirmInput.visibility = View.VISIBLE
@@ -369,6 +374,35 @@ class SimpleOverlayController(
         }
         return root
     }
+
+    private fun tryLaunchTextConfirmActivity(
+        decision: EnforcementDecision,
+        policy: AppPolicy
+    ): Boolean =
+        try {
+            context.startActivity(
+                V2TextConfirmActivity.intentFor(
+                    context = context,
+                    targetIdentityKey = decision.targetIdentity.identityKey,
+                    targetPackage = decision.targetIdentity.rawPackageName,
+                    confirmText = policy.challengeConfirmText,
+                    passthroughMillis = policy.passthroughMillis
+                )
+            )
+            V2DiagnosticBridge.log(
+                context,
+                "v2",
+                "challenge text confirm activity launched package=${decision.targetIdentity.rawPackageName}"
+            )
+            true
+        } catch (throwable: Throwable) {
+            V2DiagnosticBridge.log(
+                context,
+                "v2",
+                "challenge text confirm activity launch failed package=${decision.targetIdentity.rawPackageName} error=${throwable.message}"
+            )
+            false
+        }
 
     private fun startCountdown(
         policy: AppPolicy,

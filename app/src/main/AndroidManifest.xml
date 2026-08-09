@@ -22,6 +22,14 @@
         android:theme="@style/Theme.AddictionBuster">
 
         <activity
+            android:name=".V2TextConfirmActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:windowSoftInputMode="stateVisible|adjustResize" />
+
+        <activity
             android:name=".ChallengeActivity"
             android:excludeFromRecents="true"
             android:exported="false"
