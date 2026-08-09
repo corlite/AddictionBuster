@@ -9,6 +9,7 @@ import android.widget.TextView
 import com.addictionbuster.enforcement.stats.AppUsageStats
 import com.addictionbuster.enforcement.stats.DailyStatsSnapshot
 import com.addictionbuster.enforcement.stats.EnforcementStatsAggregator
+import com.addictionbuster.enforcement.runtime.V2AccessibilityRuntime
 import com.addictionbuster.enforcement.storage.LocalAppUsageRepository
 import com.addictionbuster.enforcement.storage.LocalEventStore
 import com.addictionbuster.enforcement.storage.LocalPhoneUsageRepository
@@ -22,6 +23,9 @@ class StatsActivity : Activity() {
     }
 
     private fun buildContent(): ScrollView {
+        if (V2RuntimeMode.isEnabled(this)) {
+            V2AccessibilityRuntime.flushForStatsReport()
+        }
         val snapshot = EnforcementStatsAggregator(
             appUsageRepository = LocalAppUsageRepository(this),
             phoneUsageRepository = LocalPhoneUsageRepository(this),

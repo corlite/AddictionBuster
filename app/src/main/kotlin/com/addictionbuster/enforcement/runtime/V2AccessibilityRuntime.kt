@@ -53,6 +53,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 object V2AccessibilityRuntime {
     private const val TAG = "V2AccessibilityRuntime"
@@ -104,6 +106,10 @@ object V2AccessibilityRuntime {
         runtime = null
         Log.d(TAG, "v2 accessibility runtime destroyed")
     }
+
+    @JvmStatic
+    fun flushForStatsReport(timeoutMillis: Long = 500L): Boolean =
+        runtime?.flushForStatsReport(timeoutMillis) ?: false
 
     private class RuntimeHolder(
         private val service: BusterAccessibilityService,
@@ -178,6 +184,15 @@ object V2AccessibilityRuntime {
             }
         }
 
+        fun flushForStatsReport(timeoutMillis: Long): Boolean {
+            val latch = CountDownLatch(1)
+            val accepted = synchronized(ingressLock) {
+                eventProcessor.submit(RuntimeInput.StatsFlush(System.currentTimeMillis(), latch))
+            }
+            if (!accepted) return false
+            return latch.await(timeoutMillis.coerceAtLeast(1L), TimeUnit.MILLISECONDS)
+        }
+
         fun stop() {
             active = false
             eventProcessor.close()
@@ -201,6 +216,11 @@ object V2AccessibilityRuntime {
                 is RuntimeInput.Screen -> processScreenEvent(input.action, input.receivedAtMillis)
                 is RuntimeInput.Tick -> processTick(input.receivedAtMillis)
                 is RuntimeInput.Overlay -> processOverlayAction(input.action, input.receivedAtMillis)
+                is RuntimeInput.StatsFlush -> try {
+                    processTick(input.receivedAtMillis)
+                } finally {
+                    input.latch.countDown()
+                }
             }
         }
 
@@ -233,6 +253,11 @@ object V2AccessibilityRuntime {
                         "overlay action exception action=${input.action.javaClass.simpleName} error=${throwable.message}"
                     )
                     Log.w(TAG, "failed to process v2 overlay action", throwable)
+                }
+                is RuntimeInput.StatsFlush -> {
+                    V2DiagnosticBridge.log(service, "v2", "stats flush exception error=${throwable.message}")
+                    Log.w(TAG, "failed to process v2 stats flush", throwable)
+                    input.latch.countDown()
                 }
             }
         }
@@ -929,6 +954,11 @@ private sealed interface RuntimeInput {
     data class Overlay(
         val action: RuntimeOverlayAction,
         override val receivedAtMillis: Long
+    ) : RuntimeInput
+
+    data class StatsFlush(
+        override val receivedAtMillis: Long,
+        val latch: CountDownLatch
     ) : RuntimeInput
 }
 
