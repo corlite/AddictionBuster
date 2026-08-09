@@ -23,7 +23,7 @@ Don't block the impulse. Interrupt it.
 
 ## Status
 
-Current source version: `0.3.1`
+Current source version: `0.3.2`
 
 The project is early but usable. The first formal GitHub Release is available as `v0.3.1`.
 
