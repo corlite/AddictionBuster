@@ -28,11 +28,11 @@ class SystemHealthNotifier(private val context: Context) {
         )
         val notification = android.app.Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("瘾头破坏器核心服务失效")
-            .setContentText("管控权限异常，非安全区应用将被保护性拦截。点击修复。")
+            .setContentTitle(context.getString(R.string.system_health_notification_title))
+            .setContentText(context.getString(R.string.system_health_notification_text))
             .setStyle(
                 android.app.Notification.BigTextStyle()
-                    .bigText("检测到 ${issues.joinToString()}。请立即恢复无障碍、悬浮窗或前台服务权限。")
+                    .bigText(context.getString(R.string.system_health_notification_big_text, issues.joinToString()))
             )
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -45,10 +45,10 @@ class SystemHealthNotifier(private val context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "核心服务状态",
+            context.getString(R.string.system_health_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "显示无障碍、悬浮窗、前台服务等核心权限异常"
+            description = context.getString(R.string.system_health_channel_description)
             setShowBadge(true)
         }
         notificationManager.createNotificationChannel(channel)

@@ -25,11 +25,11 @@ public class NotificationAccessGuideActivity extends Activity {
         root.setPadding(dp(22), dp(28), dp(22), dp(18));
         root.setBackgroundColor(Color.rgb(248, 250, 252));
 
-        TextView title = text("开启后台媒体阻断", 28, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.notification_guide_title), 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
         TextView summary = text(
-                "下一步会进入系统“通知使用权”页面。请只开启最上面的“授予通知使用权”。",
+                getString(R.string.notification_guide_summary),
                 16,
                 Color.rgb(51, 65, 85),
                 false
@@ -38,22 +38,22 @@ public class NotificationAccessGuideActivity extends Activity {
         root.addView(summary, matchWrap());
 
         root.addView(section(
-                "我们需要它做什么",
-                "只用于读取媒体会话的包名，并在被限制应用后台播放声音时尝试暂停。比如哔哩哔哩退到后台还在播放时，瘾头破坏器会调用系统媒体暂停。"
+                getString(R.string.notification_guide_why_title),
+                getString(R.string.notification_guide_why_body)
         ), matchWrap());
 
         root.addView(section(
-                "不用额外开启什么",
-                "不用单独开启实时、对话、通知、静音等内容权限。那些是 Android 对通知使用权的统一风险说明，不是本应用要读取的内容。"
+                getString(R.string.notification_guide_not_needed_title),
+                getString(R.string.notification_guide_not_needed_body)
         ), matchWrap());
 
         root.addView(section(
-                "做不到的边界",
-                "普通 APK 不能真正冻结或强制停止其他应用。这里能做的是后台媒体暂停；前台打开应用仍由无障碍拦截服务处理。"
+                getString(R.string.notification_guide_limits_title),
+                getString(R.string.notification_guide_limits_body)
         ), matchWrap());
 
         Button openSettingsButton = new Button(this);
-        openSettingsButton.setText("去授予通知使用权");
+        openSettingsButton.setText(R.string.notification_guide_open_settings);
         openSettingsButton.setAllCaps(false);
         openSettingsButton.setOnClickListener(v -> {
             DiagnosticLogger.log(this, "permission", "open notification listener settings");
@@ -62,13 +62,13 @@ public class NotificationAccessGuideActivity extends Activity {
         root.addView(openSettingsButton, matchWrap());
 
         Button backButton = new Button(this);
-        backButton.setText("先不开启");
+        backButton.setText(R.string.notification_guide_skip);
         backButton.setAllCaps(false);
         backButton.setOnClickListener(v -> finish());
         root.addView(backButton, matchWrap());
 
         TextView hint = text(
-                "不开启这个权限也可以使用前台拦截，只是后台播放声音可能无法自动暂停。",
+                getString(R.string.notification_guide_hint),
                 14,
                 Color.rgb(100, 116, 139),
                 false

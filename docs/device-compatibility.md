@@ -22,6 +22,7 @@ Development-device coverage recorded in the project notes:
 | Environment | Coverage | Status |
 | --- | --- | --- |
 | Android emulator, API 36 | Storage instrumentation tests, setup gate, foreground service startup, basic launch smoke tests | Passed during development |
+| Vivo X300, OriginOS 6, Android 16 | v0.3.3 release-signed APK; text confirmation input, today's app-usage report, Chinese/English UI consistency | Passed maintainer real-device regression test; see issues [#8](https://github.com/corlite/AddictionBuster/issues/8), [#9](https://github.com/corlite/AddictionBuster/issues/9), and [#10](https://github.com/corlite/AddictionBuster/issues/10) |
 
 ## Needs Community Testing
 

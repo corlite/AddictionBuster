@@ -74,10 +74,10 @@ public class DiagnosticActivity extends Activity {
         root.setPadding(dp(18), dp(20), dp(18), dp(14));
         root.setBackgroundColor(Color.rgb(248, 250, 252));
 
-        TextView title = text("诊断中心", 26, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.diagnostic_title), 26, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView hint = text("复现问题后，点“发送诊断给开发者”。诊断会包含版本、权限状态、最近关键事件和最近 1 小时日志。", 14, Color.rgb(71, 85, 105), false);
+        TextView hint = text(getString(R.string.diagnostic_intro), 14, Color.rgb(71, 85, 105), false);
         hint.setPadding(0, dp(6), 0, dp(10));
         root.addView(hint, matchWrap());
 
@@ -85,37 +85,37 @@ public class DiagnosticActivity extends Activity {
         statusView.setPadding(dp(12), dp(10), dp(12), dp(10));
         root.addView(statusView, matchWrap());
 
-        Button shareButton = button("发送诊断给开发者");
+        Button shareButton = button(getString(R.string.diagnostic_share));
         shareButton.setTextSize(17);
         shareButton.setOnClickListener(v -> shareDiagnosticReport());
         root.addView(shareButton, matchWrap());
 
-        Button refreshButton = button("刷新诊断");
+        Button refreshButton = button(getString(R.string.diagnostic_refresh));
         refreshButton.setOnClickListener(v -> refreshAll());
         root.addView(refreshButton, matchWrap());
 
-        TextView advancedTitle = text("高级日志", 18, Color.rgb(30, 64, 175), true);
+        TextView advancedTitle = text(getString(R.string.diagnostic_advanced_logs), 18, Color.rgb(30, 64, 175), true);
         advancedTitle.setPadding(0, dp(12), 0, dp(6));
         root.addView(advancedTitle, matchWrap());
 
         LinearLayout filterRow = new LinearLayout(this);
         filterRow.setOrientation(LinearLayout.HORIZONTAL);
-        Button last30Button = button("最近 30 分钟");
+        Button last30Button = button(getString(R.string.diagnostic_last_30));
         last30Button.setOnClickListener(v -> setLogWindow(30));
         filterRow.addView(last30Button, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        Button last60Button = button("最近 1 小时");
+        Button last60Button = button(getString(R.string.diagnostic_last_60));
         last60Button.setOnClickListener(v -> setLogWindow(60));
         filterRow.addView(last60Button, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         root.addView(filterRow, matchWrap());
 
         LinearLayout actionRow = new LinearLayout(this);
         actionRow.setOrientation(LinearLayout.HORIZONTAL);
-        Button copyButton = button("复制诊断");
+        Button copyButton = button(getString(R.string.diagnostic_copy));
         copyButton.setOnClickListener(v -> copyDiagnosticReport());
         actionRow.addView(copyButton, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        Button clearButton = button("清空日志");
+        Button clearButton = button(getString(R.string.diagnostic_clear));
         clearButton.setOnClickListener(v -> clearLog());
         actionRow.addView(clearButton, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         root.addView(actionRow, matchWrap());
@@ -160,22 +160,23 @@ public class DiagnosticActivity extends Activity {
         long phoneUsedMinutes = V2RuleBridge.getPhoneDailyUsedMinutes(this);
         String latestLine = DiagnosticLogger.lastImportantLine(this);
 
-        statusView.setText(
-                "版本：" + versionName() + "\n"
-                        + "无障碍拦截：" + (accessibilityEnabled ? "已开启" : "未开启") + "\n"
-                        + "后台媒体阻断：" + (mediaEnabled ? "已开启" : "未开启") + "\n"
-                        + "生效应用：" + blockedCount + " 个\n"
-                        + "手机时长：每日 " + limitText(phoneDailyLimit) + "，单次 " + limitText(phoneSessionLimit) + "\n"
-                        + "今日手机已统计：" + phoneUsedMinutes + " 分钟\n"
-                        + "手机白名单：" + phoneWhitelistCount + " 个自选应用\n"
-                        + "日志保留：自动保留最近 1 小时，每分钟检查一次\n"
-                        + "最近关键事件：" + latestLine
-        );
+        statusView.setText(getString(
+                R.string.diagnostic_status_format,
+                versionName(),
+                getString(accessibilityEnabled ? R.string.status_enabled : R.string.status_disabled),
+                getString(mediaEnabled ? R.string.status_enabled : R.string.status_disabled),
+                blockedCount,
+                limitText(phoneDailyLimit),
+                limitText(phoneSessionLimit),
+                phoneUsedMinutes,
+                phoneWhitelistCount,
+                latestLine
+        ));
     }
 
     private void refreshLog() {
         if (logWindowView != null) {
-            logWindowView.setText("当前显示最近 " + logWindowMinutes + " 分钟日志");
+            logWindowView.setText(getString(R.string.diagnostic_log_window_format, logWindowMinutes));
         }
         if (logView != null) {
             logView.setText(DiagnosticLogger.readRecent(this, logWindowMinutes));
@@ -191,46 +192,50 @@ public class DiagnosticActivity extends Activity {
         String report = buildDiagnosticReport();
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         if (clipboard != null) {
-            clipboard.setPrimaryClip(ClipData.newPlainText("AddictionBuster diagnostic report", report));
-            Toast.makeText(this, "诊断报告已复制", Toast.LENGTH_SHORT).show();
+            clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.diagnostic_share_subject), report));
+            Toast.makeText(this, R.string.diagnostic_copied, Toast.LENGTH_SHORT).show();
         }
     }
 
     private void shareDiagnosticReport() {
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");
-        send.putExtra(Intent.EXTRA_SUBJECT, "瘾头破坏器诊断报告");
+        send.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.diagnostic_share_subject));
         send.putExtra(Intent.EXTRA_TEXT, buildDiagnosticReport());
-        startActivity(Intent.createChooser(send, "发送诊断给开发者"));
+        startActivity(Intent.createChooser(send, getString(R.string.diagnostic_share_chooser)));
     }
 
     private String buildDiagnosticReport() {
-        return "瘾头破坏器诊断报告\n"
-                + "生成时间：" + nowText() + "\n"
-                + "版本：" + versionName() + "\n"
-                + "设备：" + Build.MANUFACTURER + " " + Build.MODEL + "\n"
-                + "Android：" + Build.VERSION.RELEASE + " / API " + Build.VERSION.SDK_INT + "\n"
-                + "无障碍拦截：" + (isAccessibilityServiceEnabled() ? "已开启" : "未开启") + "\n"
-                + "后台媒体阻断：" + (isNotificationListenerEnabled() ? "已开启" : "未开启") + "\n"
-                + "生效应用：" + RuleStore.getBlockedPackages(this).size() + " 个\n"
-                + "手机时长每日限制：" + limitText(RuleStore.getPhoneDailyLimitMinutes(this)) + "\n"
-                + "手机时长单次限制：" + limitText(RuleStore.getPhoneSessionLimitMinutes(this)) + "\n"
-                + "今日手机已统计：" + V2RuleBridge.getPhoneDailyUsedMinutes(this) + " 分钟\n"
-                + "手机白名单：" + RuleStore.getPhoneWhitelistPackages(this).size() + " 个自选应用\n"
-                + "最近关键事件：" + DiagnosticLogger.lastImportantLine(this) + "\n\n"
-                + "提示：日志可能包含应用名称和包名，用于判断拦截命中的目标。\n\n"
-                + "最近 1 小时日志：\n"
-                + DiagnosticLogger.readRecent(this, 60);
+        return getString(
+                R.string.diagnostic_report_format,
+                nowText(),
+                versionName(),
+                Build.MANUFACTURER,
+                Build.MODEL,
+                Build.VERSION.RELEASE,
+                Build.VERSION.SDK_INT,
+                getString(isAccessibilityServiceEnabled() ? R.string.status_enabled : R.string.status_disabled),
+                getString(isNotificationListenerEnabled() ? R.string.status_enabled : R.string.status_disabled),
+                RuleStore.getBlockedPackages(this).size(),
+                limitText(RuleStore.getPhoneDailyLimitMinutes(this)),
+                limitText(RuleStore.getPhoneSessionLimitMinutes(this)),
+                V2RuleBridge.getPhoneDailyUsedMinutes(this),
+                RuleStore.getPhoneWhitelistPackages(this).size(),
+                DiagnosticLogger.lastImportantLine(this),
+                DiagnosticLogger.readRecent(this, 60)
+        );
     }
 
     private String limitText(int minutes) {
-        return minutes <= 0 ? "未开启" : minutes + " 分钟";
+        return minutes <= 0
+                ? getString(R.string.diagnostic_limit_disabled)
+                : getString(R.string.diagnostic_limit_minutes, minutes);
     }
 
     private void clearLog() {
         DiagnosticLogger.clear(this);
         refreshAll();
-        Toast.makeText(this, "诊断日志已清空", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.diagnostic_cleared, Toast.LENGTH_SHORT).show();
     }
 
     private boolean isAccessibilityServiceEnabled() {
@@ -278,9 +283,9 @@ public class DiagnosticActivity extends Activity {
             } else {
                 info = packageManager.getPackageInfo(getPackageName(), 0);
             }
-            return info.versionName == null ? "未知" : info.versionName;
+            return info.versionName == null ? getString(R.string.unknown) : info.versionName;
         } catch (PackageManager.NameNotFoundException ignored) {
-            return "未知";
+            return getString(R.string.unknown);
         }
     }
 

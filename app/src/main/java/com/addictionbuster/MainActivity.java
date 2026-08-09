@@ -96,6 +96,14 @@ public class MainActivity extends Activity {
         phoneLimitButton.setOnClickListener(v -> startActivity(new Intent(this, PhoneLimitActivity.class)));
         root.addView(phoneLimitButton, UiKit.matchWrap());
 
+        Button scheduledRulesButton = UiKit.entryButton(
+                this,
+                getString(R.string.action_scheduled_rules),
+                getString(R.string.action_scheduled_rules_subtitle)
+        );
+        scheduledRulesButton.setOnClickListener(v -> startActivity(new Intent(this, ScheduledRulesActivity.class)));
+        root.addView(scheduledRulesButton, UiKit.spaced(this, 10));
+
         Button statsButton = UiKit.entryButton(
                 this,
                 getString(R.string.action_today_report),

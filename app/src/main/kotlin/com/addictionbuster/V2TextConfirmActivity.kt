@@ -64,16 +64,16 @@ class V2TextConfirmActivity : Activity() {
             setBackgroundColor(Color.rgb(248, 250, 252))
         }
 
-        root.addView(text("先停一下", 18, Color.rgb(37, 99, 235), true).apply {
+        root.addView(text(getString(R.string.challenge_eyebrow), 18, Color.rgb(37, 99, 235), true).apply {
             gravity = Gravity.CENTER
         }, matchWrap())
 
-        root.addView(text("输入确认文字", 28, Color.rgb(15, 23, 42), true).apply {
+        root.addView(text(getString(R.string.challenge_text_title), 28, Color.rgb(15, 23, 42), true).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(18), 0, dp(12))
         }, matchWrap())
 
-        messageView = text("给自己一个清醒的停顿。", 17, Color.rgb(71, 85, 105), false).apply {
+        messageView = text(getString(R.string.challenge_text_body), 17, Color.rgb(71, 85, 105), false).apply {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, dp(18))
         }
@@ -81,13 +81,13 @@ class V2TextConfirmActivity : Activity() {
 
         confirmInput = EditText(this).apply {
             setSingleLine(true)
-            hint = "请输入：$confirmText"
+            hint = getString(R.string.challenge_confirm_prompt_format, confirmText)
         }
         root.addView(confirmInput, matchWrap())
 
         confirmButton = Button(this).apply {
             isAllCaps = false
-            text = "确认文字"
+            text = getString(R.string.challenge_confirm_button)
             setOnClickListener { validateConfirmText() }
         }
         root.addView(confirmButton, matchWrap())
@@ -95,24 +95,24 @@ class V2TextConfirmActivity : Activity() {
         allowShortButton = Button(this).apply {
             isAllCaps = false
             isEnabled = false
-            text = "请先完成确认"
+            text = getString(R.string.challenge_confirm_complete_first)
         }
         root.addView(allowShortButton, matchWrap())
 
         allowFullButton = Button(this).apply {
             isAllCaps = false
             isEnabled = false
-            text = "请先完成确认"
+            text = getString(R.string.challenge_confirm_complete_first)
         }
         root.addView(allowFullButton, matchWrap())
 
         root.addView(Button(this).apply {
             isAllCaps = false
-            text = "算了，回到桌面"
+            text = getString(R.string.challenge_quit)
             setOnClickListener { goHome() }
         }, matchWrap())
 
-        root.addView(text("完成确认后会按本次使用上限放行。", 14, Color.rgb(100, 116, 139), false).apply {
+        root.addView(text(getString(R.string.challenge_confirm_release_hint), 14, Color.rgb(100, 116, 139), false).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(22), 0, 0)
         }, matchWrap())
@@ -123,7 +123,7 @@ class V2TextConfirmActivity : Activity() {
     private fun validateConfirmText() {
         val actual = confirmInput.text.toString().trim()
         if (actual != confirmText) {
-            confirmInput.error = "请完整输入确认文字"
+            confirmInput.error = getString(R.string.challenge_confirm_error)
             V2DiagnosticBridge.log(this, "v2", "text confirm mismatch package=$targetPackage")
             return
         }
@@ -137,17 +137,17 @@ class V2TextConfirmActivity : Activity() {
         val sessionMinutes = max(1, ceil(passthroughMillis / 60_000.0).toInt())
         val shortMinutes = min(5, sessionMinutes)
         allowShortButton.isEnabled = true
-        allowShortButton.text = "允许 $shortMinutes 分钟"
+        allowShortButton.text = getString(R.string.challenge_allow_minutes_format, shortMinutes)
         allowShortButton.setOnClickListener { continueToTarget(shortMinutes) }
         if (sessionMinutes > shortMinutes) {
             allowFullButton.visibility = View.VISIBLE
             allowFullButton.isEnabled = true
-            allowFullButton.text = "允许 $sessionMinutes 分钟"
+            allowFullButton.text = getString(R.string.challenge_allow_minutes_format, sessionMinutes)
             allowFullButton.setOnClickListener { continueToTarget(sessionMinutes) }
         } else {
             allowFullButton.visibility = View.GONE
         }
-        messageView.text = "挑战完成。现在再决定一次：你真的要打开它吗？"
+        messageView.text = getString(R.string.challenge_completed_decide_again)
     }
 
     private fun continueToTarget(minutes: Int) {

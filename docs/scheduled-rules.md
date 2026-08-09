@@ -1,10 +1,10 @@
 # Scheduled Rules Design
 
-Scheduled blocking is partially modeled in the v2 enforcement layer. It is not yet exposed in the Android UI.
+Scheduled blocking is modeled in the v2 enforcement layer and is exposed in the Android UI as a single editable weekly time window.
 
 ## Current Model
 
-The current model is named `SleepPolicy` because the first scheduled use case was a sleep lock. It can already represent general daily time windows:
+The persisted model is still named `SleepPolicy` because the first scheduled use case was a sleep lock. The UI presents it as scheduled limits so the same model can cover bedtime, work, and study windows:
 
 ```kotlin
 data class SleepPolicy(
@@ -28,6 +28,18 @@ Rules:
 - The end minute is exclusive.
 - A window where `startMinuteOfDay > endMinuteOfDay` crosses midnight.
 - A disabled policy is never active.
+
+## Android UI
+
+The main screen links to **Scheduled limits** from the Usage and Reports section. The screen supports:
+
+- Enabling or disabling scheduled limits.
+- Editing one `HH:mm` start time.
+- Editing one `HH:mm` end time.
+- Selecting active days from Monday through Sunday.
+- Cross-midnight windows, such as `22:30` to `07:00`.
+
+When saved, the screen writes one `SleepWindow` into `RuleSnapshot.sleepPolicy`. Disabling scheduled limits writes a disabled `SleepPolicy` with no windows.
 
 ## Runtime Behavior
 
@@ -56,10 +68,8 @@ The current tests cover:
 
 ## Remaining Work
 
-To make scheduled blocking user-facing:
-
 1. Rename or wrap `SleepPolicy` as a more general `SchedulePolicy` without breaking existing persisted rules.
-2. Add a settings screen for daily time windows.
-3. Decide how scheduled rules combine with per-app daily limits, session limits, cooldowns, and challenges.
+2. Support multiple named windows instead of a single editable window.
+3. Decide how scheduled rules should combine with future cooldowns and page-specific rules.
 4. Add UI and storage migration tests.
-5. Add screenshots and documentation once the UI exists.
+5. Add screenshots once the scheduled limits screen settles.

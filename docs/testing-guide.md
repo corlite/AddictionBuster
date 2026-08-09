@@ -49,6 +49,17 @@ High-priority devices:
 4. Open a non-whitelisted app.
 5. Confirm that the phone-wide limit triggers when the limit is reached.
 
+## Scheduled Limits Test
+
+1. Open Scheduled limits from the main screen.
+2. Enable scheduled limits.
+3. Set a window that includes the next few minutes.
+4. Select today's weekday and save.
+5. Open a controlled app.
+6. Confirm that the app is blocked during the active window.
+7. Return to Scheduled limits, disable the schedule, and save.
+8. Confirm that the controlled app goes back to its normal rule flow.
+
 ## Background Media Test
 
 1. Enable notification access for AddictionBuster.

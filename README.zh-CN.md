@@ -17,11 +17,11 @@ AddictionBuster 的中文名是“瘾头破坏器”。这是一个开源 Androi
 → 时间到自动回桌面
 ```
 
-当前源码版本：`0.3.3`
+当前源码版本：`0.3.4`
 
 正式下载地址：
 
-[下载 AddictionBuster v0.3.1](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.1)
+[下载 AddictionBuster v0.3.3](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.3)
 
 ## 截图
 
@@ -34,8 +34,8 @@ AddictionBuster 的中文名是“瘾头破坏器”。这是一个开源 Androi
 
 Release 中包含：
 
-- `AddictionBuster-v0.3.1.apk`
-- `SHA256SUMS.txt`
+- `AddictionBuster-v0.3.3.apk`
+- `AddictionBuster-v0.3.3.apk.sha256`
 
 ## 功能
 
@@ -47,7 +47,8 @@ Release 中包含：
 6. 支持手机级每日总时长限制，统计非白名单前台 App 使用时间。
 7. 支持单次打开手机时长限制，锁屏后重新计算。
 8. 支持选择手机时长白名单 App，白名单不计时、不被手机时长限制拦截。
-9. 支持角色与语音坑位：咕嘎、Doro、自定义槽位可导入 App 内图标和 9 条场景语音。
+9. 支持定时限制，在睡前、工作或学习时段自动进入强限制模式。
+10. 支持角色与语音坑位：咕嘎、Doro、自定义槽位可导入 App 内图标和 9 条场景语音。
 
 功能触发示意图见：[docs/功能触发示意图.md](docs/功能触发示意图.md)。
 简短测试清单见：[docs/测试清单与已知限制.md](docs/测试清单与已知限制.md)。
@@ -93,7 +94,8 @@ app/build/outputs/apk/debug/app-debug.apk
 10. 回到主页，进入“手机时长限制”，设置每日总时长和单次打开手机时长；填 0 表示关闭对应限制。
 11. 进入“选择白名单应用”，打开不想计入手机总时长的应用开关。
 12. 打开非白名单 App，使用时间超过每日总时长或单次打开手机时长后，会出现“手机时长已到”的拦截层。
-13. 如需角色提示，进入“设置 / 角色与语音”，选择槽位并导入 1 个图标和 9 条场景语音。
+13. 如需睡前、工作或学习时段自动强限制，进入“定时限制”，设置开始时间、结束时间和生效星期。
+14. 如需角色提示，进入“设置 / 角色与语音”，选择槽位并导入 1 个图标和 9 条场景语音。
 
 ## 诊断日志
 
@@ -115,7 +117,7 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 
 ## 已知限制
 
-- 目前仍是 MVP，没有规则组、日程、网页拦截、云同步或账号体系。
+- 目前仍是 MVP，没有规则组、多个日程窗口、网页拦截、云同步或账号体系。
 - 无障碍服务需要用户手动在系统设置里开启。
 - 规则只保存在本机。
 - 选择 App 页面只列出 launcher apps，暂不支持系统应用高级筛选。
@@ -128,11 +130,11 @@ adb shell run-as com.addictionbuster.app cat files/diagnostic.log
 
 ## 下一步
 
-- 收集 `v0.3.1` 真机反馈。
+- 收集 `v0.3.3` 及后续版本真机反馈。
 - 添加真实用户已测试设备说明。
 - 收集更多 Xiaomi / HyperOS 无障碍稳定性反馈。
-- 继续补全主界面和设置页之外的 Android UI 英文国际化。
-- 把已有日程规则模型接到 Android UI。
+- 后续新增页面继续保持中英文一致。
+- 扩展定时限制到多个时间窗口和更多组合规则。
 - 扩展无障碍与时长统计相关自动化测试。
 
 ## 维护者

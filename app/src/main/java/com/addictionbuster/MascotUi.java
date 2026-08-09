@@ -30,8 +30,17 @@ public final class MascotUi {
         LinearLayout copy = new LinearLayout(context);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(UiKit.dp(context, 10), 0, 0, 0);
-        copy.addView(UiKit.text(context, profile == MascotProfile.NONE ? "角色未启用" : profile.displayName(), 15, UiKit.COLOR_TEXT, true), UiKit.matchWrap());
-        copy.addView(UiKit.hint(context, profile == MascotProfile.NONE ? "可以在设置里导入角色图标和语音。" : profile.description()), UiKit.matchWrap());
+        copy.addView(UiKit.text(
+                context,
+                profile == MascotProfile.NONE ? context.getString(R.string.mascot_disabled) : profile.displayName(context),
+                15,
+                UiKit.COLOR_TEXT,
+                true
+        ), UiKit.matchWrap());
+        copy.addView(UiKit.hint(
+                context,
+                profile == MascotProfile.NONE ? context.getString(R.string.mascot_setup_hint) : profile.description(context)
+        ), UiKit.matchWrap());
         row.addView(copy, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         return row;
     }
@@ -50,7 +59,7 @@ public final class MascotUi {
                 UiKit.dp(context, 64)
         ));
         TextView label = new TextView(context);
-        label.setText(profile.displayName());
+        label.setText(profile.displayName(context));
         label.setTextColor(Color.WHITE);
         label.setTextSize(14);
         label.setTypeface(label.getTypeface(), Typeface.BOLD);

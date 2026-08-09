@@ -1,5 +1,7 @@
 package com.addictionbuster;
 
+import android.content.Context;
+
 public enum MascotVoiceSlot {
     BLOCK_APPEARED("拦截出现", "目标 App 被拦截或应用时长到时播放"),
     CHALLENGE_PASSED("挑战通过", "完成挑战并获得放行时播放"),
@@ -25,5 +27,53 @@ public enum MascotVoiceSlot {
 
     public String description() {
         return description;
+    }
+
+    public String displayName(Context context) {
+        switch (this) {
+            case CHALLENGE_PASSED:
+                return context.getString(R.string.voice_slot_challenge_passed);
+            case PHONE_LIMIT_REACHED:
+                return context.getString(R.string.voice_slot_phone_limit_reached);
+            case PERMISSION_ISSUE:
+                return context.getString(R.string.voice_slot_permission_issue);
+            case CONTROL_APPS:
+                return context.getString(R.string.voice_slot_control_apps);
+            case ACTIVE_APPS:
+                return context.getString(R.string.voice_slot_active_apps);
+            case ADD_APPS:
+                return context.getString(R.string.voice_slot_add_apps);
+            case TODAY_REPORT:
+                return context.getString(R.string.voice_slot_today_report);
+            case APP_RULE:
+                return context.getString(R.string.voice_slot_app_rule);
+            case BLOCK_APPEARED:
+            default:
+                return context.getString(R.string.voice_slot_block_appeared);
+        }
+    }
+
+    public String description(Context context) {
+        switch (this) {
+            case CHALLENGE_PASSED:
+                return context.getString(R.string.voice_slot_challenge_passed_desc);
+            case PHONE_LIMIT_REACHED:
+                return context.getString(R.string.voice_slot_phone_limit_reached_desc);
+            case PERMISSION_ISSUE:
+                return context.getString(R.string.voice_slot_permission_issue_desc);
+            case CONTROL_APPS:
+                return context.getString(R.string.voice_slot_control_apps_desc);
+            case ACTIVE_APPS:
+                return context.getString(R.string.voice_slot_active_apps_desc);
+            case ADD_APPS:
+                return context.getString(R.string.voice_slot_add_apps_desc);
+            case TODAY_REPORT:
+                return context.getString(R.string.voice_slot_today_report_desc);
+            case APP_RULE:
+                return context.getString(R.string.voice_slot_app_rule_desc);
+            case BLOCK_APPEARED:
+            default:
+                return context.getString(R.string.voice_slot_block_appeared_desc);
+        }
     }
 }

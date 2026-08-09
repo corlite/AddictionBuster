@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.addictionbuster.MascotSoundPlayer
 import com.addictionbuster.MascotUi
+import com.addictionbuster.R
 import com.addictionbuster.V2DiagnosticBridge
 import com.addictionbuster.V2TextConfirmActivity
 import com.addictionbuster.enforcement.AppPolicy
@@ -135,7 +136,7 @@ class SimpleOverlayController(
         }, matchWrap())
         root.addView(Button(context).apply {
             isAllCaps = false
-            text = "回到桌面"
+            text = context.getString(R.string.action_go_home)
             setOnClickListener {
                 if (!overlaySession.tryConsume()) return@setOnClickListener
                 val accepted = try {
@@ -177,23 +178,23 @@ class SimpleOverlayController(
         }
         val confirmButton = Button(this.context).apply {
             isAllCaps = false
-            text = "确认文字"
+            text = this@SimpleOverlayController.context.getString(R.string.challenge_confirm_button)
             visibility = View.GONE
         }
         val allowShortButton = Button(this.context).apply {
             isAllCaps = false
-            text = "请先完成挑战"
+            text = this@SimpleOverlayController.context.getString(R.string.challenge_complete_first)
             isEnabled = false
         }
         val allowFullButton = Button(this.context).apply {
             isAllCaps = false
-            text = "请先完成挑战"
+            text = this@SimpleOverlayController.context.getString(R.string.challenge_complete_first)
             isEnabled = false
         }
 
         root.addView(MascotUi.overlayHeader(this.context), matchWrap())
-        root.addView(text("先停一下", 26, true), matchWrap())
-        root.addView(text("APP challenge is required", 16, false).apply {
+        root.addView(text(this.context.getString(R.string.challenge_eyebrow), 26, true), matchWrap())
+        root.addView(text(this.context.getString(R.string.challenge_app_required), 16, false).apply {
             setPadding(0, dp(8), 0, dp(16))
         }, matchWrap())
         root.addView(timerView, matchWrap())
@@ -211,7 +212,7 @@ class SimpleOverlayController(
         root.addView(allowFullButton, matchWrap())
         root.addView(Button(this.context).apply {
             isAllCaps = false
-            text = "算了，回到桌面"
+            text = this@SimpleOverlayController.context.getString(R.string.challenge_quit)
             setOnClickListener {
                 if (!overlaySession.tryConsume()) return@setOnClickListener
                 val accepted = try {
@@ -244,29 +245,29 @@ class SimpleOverlayController(
 
         fun updateActionButton() {
             val remaining = max(0, policy.challengeRequiredTaps - state.tapCount)
-            actionButton.text = "点我，还差 $remaining 次"
-            messageView.text = "按钮会移动，点的时候慢一点。"
+            actionButton.text = this.context.getString(R.string.challenge_action_button_format, remaining)
+            messageView.text = this.context.getString(R.string.challenge_action_move_hint)
         }
 
         fun enableContinueButtons() {
             val sessionMinutes = max(1, ceil(policy.passthroughMillis / 60_000.0).toInt())
             val shortMinutes = min(5, sessionMinutes)
             allowShortButton.isEnabled = true
-            allowShortButton.text = "允许 $shortMinutes 分钟"
+            allowShortButton.text = this.context.getString(R.string.challenge_allow_minutes_format, shortMinutes)
             allowShortButton.setOnClickListener {
                 completeChallenge(decision, overlaySession, shortMinutes)
             }
             if (sessionMinutes > shortMinutes) {
                 allowFullButton.visibility = View.VISIBLE
                 allowFullButton.isEnabled = true
-                allowFullButton.text = "允许 $sessionMinutes 分钟"
+                allowFullButton.text = this.context.getString(R.string.challenge_allow_minutes_format, sessionMinutes)
                 allowFullButton.setOnClickListener {
                     completeChallenge(decision, overlaySession, sessionMinutes)
                 }
             } else {
                 allowFullButton.visibility = View.GONE
             }
-            messageView.text = "挑战完成。现在再决定一次：你真的要打开它吗？"
+            messageView.text = this.context.getString(R.string.challenge_completed_decide_again)
             V2DiagnosticBridge.log(
                 this.context,
                 "v2",
@@ -283,8 +284,8 @@ class SimpleOverlayController(
                 removeSession(overlaySession.id)
                 return
             }
-            messageView.text = "输入确认文字，给自己一个清醒的停顿。"
-            confirmInput.hint = "请输入：${policy.challengeConfirmText}"
+            messageView.text = this.context.getString(R.string.challenge_text_prompt)
+            confirmInput.hint = this.context.getString(R.string.challenge_confirm_prompt_format, policy.challengeConfirmText)
             confirmInput.visibility = View.VISIBLE
             confirmButton.visibility = View.VISIBLE
         }
@@ -304,7 +305,7 @@ class SimpleOverlayController(
         fun hideActionButton() {
             state.hiddenCount += 1
             actionButton.visibility = View.INVISIBLE
-            messageView.text = "按钮先藏一下，别急着点。"
+            messageView.text = this.context.getString(R.string.challenge_action_hidden)
             unhideRunnable?.let { mainHandler.removeCallbacks(it) }
             val runnable = Runnable {
                 if (currentView == null) return@Runnable
@@ -355,7 +356,7 @@ class SimpleOverlayController(
                 )
                 enableContinueButtons()
             } else {
-                confirmInput.error = "请完整输入确认文字"
+                confirmInput.error = this.context.getString(R.string.challenge_confirm_error)
                 V2DiagnosticBridge.log(
                     this.context,
                     "v2",
@@ -415,10 +416,10 @@ class SimpleOverlayController(
             override fun run() {
                 timerView.text = remainingSeconds.toString()
                 messageView.text = when {
-                    policy.challengeWaitMillis <= 0L -> "这次不等待，直接进入规则确认。"
-                    remainingSeconds % 6 >= 4 -> "慢慢吸气"
-                    remainingSeconds % 6 >= 2 -> "停一停，观察这个冲动"
-                    else -> "慢慢呼气"
+                    policy.challengeWaitMillis <= 0L -> context.getString(R.string.challenge_no_wait)
+                    remainingSeconds % 6 >= 4 -> context.getString(R.string.challenge_breathe_in)
+                    remainingSeconds % 6 >= 2 -> context.getString(R.string.challenge_pause_impulse)
+                    else -> context.getString(R.string.challenge_breathe_out)
                 }
                 if (remainingSeconds <= 0) {
                     countdownRunnable = null
@@ -467,14 +468,14 @@ class SimpleOverlayController(
 
     private fun titleFor(decision: EnforcementDecision): String =
         when (decision.action) {
-            EnforcementAction.SHOW_APP_CHALLENGE -> "先停一下"
-            EnforcementAction.SHOW_PHONE_LIMIT_BLOCK -> "手机时长已到"
-            EnforcementAction.SHOW_APP_LIMIT_BLOCK -> "应用时长已到"
-            EnforcementAction.SHOW_SLEEP_LOCK -> "睡眠时间"
-            EnforcementAction.SHOW_PAGE_BLOCK -> "页面已拦截"
-            EnforcementAction.SHOW_CLONE_BLOCK -> "双开应用已拦截"
-            EnforcementAction.SHOW_COOLDOWN_BLOCK -> "需要休息"
-            else -> "已拦截"
+            EnforcementAction.SHOW_APP_CHALLENGE -> context.getString(R.string.challenge_eyebrow)
+            EnforcementAction.SHOW_PHONE_LIMIT_BLOCK -> context.getString(R.string.phone_limit_overlay_title)
+            EnforcementAction.SHOW_APP_LIMIT_BLOCK -> context.getString(R.string.overlay_title_app_limit)
+            EnforcementAction.SHOW_SLEEP_LOCK -> context.getString(R.string.overlay_title_sleep_lock)
+            EnforcementAction.SHOW_PAGE_BLOCK -> context.getString(R.string.overlay_title_page_block)
+            EnforcementAction.SHOW_CLONE_BLOCK -> context.getString(R.string.overlay_title_clone_block)
+            EnforcementAction.SHOW_COOLDOWN_BLOCK -> context.getString(R.string.overlay_title_cooldown)
+            else -> context.getString(R.string.overlay_title_blocked)
         }
 
     private fun text(value: String, sp: Int, bold: Boolean): TextView =

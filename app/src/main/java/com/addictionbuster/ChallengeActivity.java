@@ -93,11 +93,11 @@ public class ChallengeActivity extends Activity {
         root.setPadding(dp(24), dp(46), dp(24), dp(24));
         root.setBackgroundColor(Color.rgb(248, 250, 252));
 
-        TextView eyebrow = text("先停一下", 18, Color.rgb(37, 99, 235), true);
+        TextView eyebrow = text(getString(R.string.challenge_eyebrow), 18, Color.rgb(37, 99, 235), true);
         eyebrow.setGravity(Gravity.CENTER);
         root.addView(eyebrow, matchWrap());
 
-        TextView title = text("你正在打开\n" + targetLabel, 28, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.challenge_title_format, targetLabel), 28, Color.rgb(15, 23, 42), true);
         title.setGravity(Gravity.CENTER);
         title.setPadding(0, dp(18), 0, dp(12));
         root.addView(title, matchWrap());
@@ -121,36 +121,36 @@ public class ChallengeActivity extends Activity {
 
         confirmInput = new EditText(this);
         confirmInput.setSingleLine(true);
-        confirmInput.setHint("输入确认文字");
+        confirmInput.setHint(R.string.challenge_confirm_hint);
         confirmInput.setVisibility(View.GONE);
         root.addView(confirmInput, matchWrap());
 
         confirmButton = new Button(this);
-        confirmButton.setText("确认文字");
+        confirmButton.setText(R.string.challenge_confirm_button);
         confirmButton.setAllCaps(false);
         confirmButton.setVisibility(View.GONE);
         confirmButton.setOnClickListener(v -> validateConfirmText());
         root.addView(confirmButton, matchWrap());
 
         fiveMinuteButton = new Button(this);
-        fiveMinuteButton.setText("请先完成挑战");
+        fiveMinuteButton.setText(R.string.challenge_complete_first);
         fiveMinuteButton.setAllCaps(false);
         fiveMinuteButton.setEnabled(false);
         root.addView(fiveMinuteButton, matchWrap());
 
         tenMinuteButton = new Button(this);
-        tenMinuteButton.setText("请先完成挑战");
+        tenMinuteButton.setText(R.string.challenge_complete_first);
         tenMinuteButton.setAllCaps(false);
         tenMinuteButton.setEnabled(false);
         root.addView(tenMinuteButton, matchWrap());
 
         Button quitButton = new Button(this);
-        quitButton.setText("算了，回到桌面");
+        quitButton.setText(R.string.challenge_quit);
         quitButton.setAllCaps(false);
         quitButton.setOnClickListener(v -> goHome());
         root.addView(quitButton, matchWrap());
 
-        TextView hint = text("完成规则后会按本次使用上限放行。时间到期后，再打开会重新拦截。", 14, Color.rgb(100, 116, 139), false);
+        TextView hint = text(getString(R.string.challenge_hint), 14, Color.rgb(100, 116, 139), false);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(22), 0, 0);
         root.addView(hint, matchWrap());
@@ -161,16 +161,16 @@ public class ChallengeActivity extends Activity {
     private void updateCountdown() {
         timerView.setText(String.valueOf(remaining));
         if (rule.waitSeconds <= 0) {
-            breathView.setText("这次不等待，直接进入规则确认。");
+            breathView.setText(R.string.challenge_no_wait);
             return;
         }
         int phase = remaining % 6;
         if (phase >= 4) {
-            breathView.setText("慢慢吸气");
+            breathView.setText(R.string.challenge_breathe_in);
         } else if (phase >= 2) {
-            breathView.setText("停一停，观察这个冲动");
+            breathView.setText(R.string.challenge_pause_impulse);
         } else {
-            breathView.setText("慢慢呼气");
+            breathView.setText(R.string.challenge_breathe_out);
         }
     }
 
@@ -182,7 +182,7 @@ public class ChallengeActivity extends Activity {
         if (rule.requiredTaps > 0) {
             tapButton.setVisibility(View.VISIBLE);
             updateTapButton();
-            breathView.setText("还需要手动点几下，确认不是惯性打开。");
+            breathView.setText(R.string.challenge_tap_prompt);
             return;
         }
         beginConfirmOrComplete();
@@ -202,7 +202,7 @@ public class ChallengeActivity extends Activity {
 
     private void updateTapButton() {
         int remainingTaps = Math.max(0, rule.requiredTaps - tapCount);
-        tapButton.setText("继续点，还差 " + remainingTaps + " 次");
+        tapButton.setText(getString(R.string.challenge_taps_remaining_format, remainingTaps));
     }
 
     private void beginConfirmOrComplete() {
@@ -210,8 +210,8 @@ public class ChallengeActivity extends Activity {
             completeChallenge();
             return;
         }
-        breathView.setText("输入确认文字，给自己一个清醒的停顿。");
-        confirmInput.setHint("请输入：" + rule.confirmText);
+        breathView.setText(R.string.challenge_text_prompt);
+        confirmInput.setHint(getString(R.string.challenge_confirm_prompt_format, rule.confirmText));
         confirmInput.setVisibility(View.VISIBLE);
         confirmButton.setVisibility(View.VISIBLE);
     }
@@ -224,7 +224,7 @@ public class ChallengeActivity extends Activity {
             confirmButton.setVisibility(View.GONE);
             completeChallenge();
         } else {
-            confirmInput.setError("请完整输入确认文字");
+            confirmInput.setError(getString(R.string.challenge_confirm_error));
             DiagnosticLogger.log(this, "challenge", "activity confirm mismatch targetPackage=" + targetPackage);
         }
     }
@@ -235,9 +235,9 @@ public class ChallengeActivity extends Activity {
         long dailyRemainingSeconds = RuleStore.getDailyRemainingSeconds(this, targetPackage, rule);
         if (dailyRemainingSeconds <= 0L) {
             fiveMinuteButton.setEnabled(false);
-            fiveMinuteButton.setText("今日额度已用完");
+            fiveMinuteButton.setText(R.string.challenge_quota_exhausted);
             tenMinuteButton.setVisibility(View.GONE);
-            breathView.setText("今天给这个应用的额度已经用完了，先回到桌面。");
+            breathView.setText(R.string.challenge_quota_exhausted_body);
             DiagnosticLogger.log(this, "challenge", "activity quota exhausted targetPackage=" + targetPackage);
             return;
         }
@@ -248,17 +248,17 @@ public class ChallengeActivity extends Activity {
         int firstMinutes = Math.min(5, sessionLimit);
         int secondMinutes = sessionLimit;
         fiveMinuteButton.setEnabled(true);
-        fiveMinuteButton.setText("允许 " + firstMinutes + " 分钟");
+        fiveMinuteButton.setText(getString(R.string.challenge_allow_minutes_format, firstMinutes));
         fiveMinuteButton.setOnClickListener(v -> continueToTarget(firstMinutes));
         if (secondMinutes > firstMinutes) {
             tenMinuteButton.setVisibility(View.VISIBLE);
             tenMinuteButton.setEnabled(true);
-            tenMinuteButton.setText("允许 " + secondMinutes + " 分钟");
+            tenMinuteButton.setText(getString(R.string.challenge_allow_minutes_format, secondMinutes));
             tenMinuteButton.setOnClickListener(v -> continueToTarget(secondMinutes));
         } else {
             tenMinuteButton.setVisibility(View.GONE);
         }
-        breathView.setText("现在再决定一次：你真的要打开它吗？");
+        breathView.setText(R.string.challenge_decide_again);
     }
 
     private void continueToTarget(int minutes) {

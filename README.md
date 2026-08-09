@@ -23,9 +23,9 @@ Don't block the impulse. Interrupt it.
 
 ## Status
 
-Current source version: `0.3.3`
+Current source version: `0.3.4`
 
-The project is early but usable. The first formal GitHub Release is available as `v0.3.1`.
+The project is early but usable. The latest formal GitHub Release is available as `v0.3.3`.
 
 ## Why AddictionBuster?
 
@@ -51,6 +51,7 @@ This makes it useful for people who want a pause, not just a wall.
 - Temporarily allow access after a challenge succeeds.
 - Return to the home screen when the allowed session expires.
 - Set phone-wide daily and per-unlock usage limits.
+- Set scheduled blocking windows for bedtime, work, or study periods.
 - Exclude selected apps with a phone usage whitelist.
 - Pause background media from controlled apps when notification access is enabled.
 - Keep a local diagnostic log for troubleshooting accessibility and timing issues.
@@ -75,12 +76,12 @@ Real-device testers can follow the [Testing Guide](docs/testing-guide.md) and re
 
 Download the latest APK from GitHub Releases:
 
-[Download AddictionBuster v0.3.1](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.1)
+[Download AddictionBuster v0.3.3](https://github.com/corlite/AddictionBuster/releases/tag/v0.3.3)
 
 The release includes:
 
-- `AddictionBuster-v0.3.1.apk`
-- `SHA256SUMS.txt`
+- `AddictionBuster-v0.3.3.apk`
+- `AddictionBuster-v0.3.3.apk.sha256`
 
 After installing:
 
@@ -89,7 +90,8 @@ After installing:
 3. Optional: enable notification access for background media blocking.
 4. Add controlled apps.
 5. Configure limits and challenges.
-6. Open a controlled app to test the intervention flow.
+6. Optional: configure scheduled limits for bedtime, work, or study windows.
+7. Open a controlled app to test the intervention flow.
 
 ## Build
 
@@ -142,11 +144,11 @@ Android instrumentation tests require an emulator or device:
 
 ## Roadmap
 
-- Collect real-device feedback for `v0.3.1`.
+- Collect real-device feedback for `v0.3.3` and later.
 - Add tested-device notes from real users.
 - Collect more Xiaomi / HyperOS accessibility reliability reports.
-- Complete English localization beyond the main dashboard and settings screens.
-- Expose scheduled blocking rules in the Android UI.
+- Continue polishing English localization as new screens are added.
+- Expand scheduled rules beyond one editable daily window.
 - Expand automated tests around accessibility and usage accounting.
 
 ## Maintainer
