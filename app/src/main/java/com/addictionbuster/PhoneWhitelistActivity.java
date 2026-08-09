@@ -42,16 +42,16 @@ public class PhoneWhitelistActivity extends Activity {
         root.setPadding(dp(18), dp(24), dp(18), dp(14));
         root.setBackgroundColor(Color.rgb(248, 250, 252));
 
-        TextView title = text("白名单应用", 28, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.phone_whitelist_title), 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView subtitle = text("打开开关后，这些 App 不计入手机总时长，也不会被手机时长限制拦截。", 15, Color.rgb(71, 85, 105), false);
+        TextView subtitle = text(getString(R.string.phone_whitelist_subtitle), 15, Color.rgb(71, 85, 105), false);
         subtitle.setPadding(0, dp(8), 0, dp(12));
         root.addView(subtitle, matchWrap());
 
         searchInput = new EditText(this);
         searchInput.setSingleLine(true);
-        searchInput.setHint("搜索应用名或包名");
+        searchInput.setHint(R.string.search_app_name_or_package);
         searchInput.setTextSize(16);
         searchInput.setPadding(dp(10), dp(8), dp(10), dp(8));
         searchInput.addTextChangedListener(new TextWatcher() {
@@ -95,7 +95,7 @@ public class PhoneWhitelistActivity extends Activity {
         shown += addMatchingRows(query, whitelist, false);
 
         if (shown == 0) {
-            TextView empty = text("没有找到匹配的应用。", 15, Color.rgb(100, 116, 139), false);
+            TextView empty = text(getString(R.string.app_search_empty_simple), 15, Color.rgb(100, 116, 139), false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(36), 0, 0);
             appListView.addView(empty, matchWrap());

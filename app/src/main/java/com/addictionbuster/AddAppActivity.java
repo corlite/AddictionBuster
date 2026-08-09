@@ -43,16 +43,16 @@ public class AddAppActivity extends Activity {
         root.setPadding(dp(18), dp(24), dp(18), dp(14));
         root.setBackgroundColor(Color.rgb(248, 250, 252));
 
-        TextView title = text("增加应用", 28, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.add_app_title), 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView subtitle = text("搜索应用名或包名，打开右侧开关后就会加入拦截。", 15, Color.rgb(71, 85, 105), false);
+        TextView subtitle = text(getString(R.string.add_app_subtitle), 15, Color.rgb(71, 85, 105), false);
         subtitle.setPadding(0, dp(8), 0, dp(12));
         root.addView(subtitle, matchWrap());
 
         searchInput = new EditText(this);
         searchInput.setSingleLine(true);
-        searchInput.setHint("搜索应用，例如 Bilibili / 哔哩哔哩");
+        searchInput.setHint(R.string.add_app_search_hint);
         searchInput.setTextSize(16);
         searchInput.setPadding(dp(10), dp(8), dp(10), dp(8));
         searchInput.addTextChangedListener(new TextWatcher() {
@@ -96,7 +96,7 @@ public class AddAppActivity extends Activity {
         shown += addMatchingRows(query, selected, false);
 
         if (shown == 0) {
-            TextView empty = text("没有找到匹配的应用。可以试试应用中文名、英文名或包名。", 15, Color.rgb(100, 116, 139), false);
+            TextView empty = text(getString(R.string.add_app_empty), 15, Color.rgb(100, 116, 139), false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(36), 0, 0);
             appListView.addView(empty, matchWrap());

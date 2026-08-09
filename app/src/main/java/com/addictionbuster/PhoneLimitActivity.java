@@ -40,10 +40,10 @@ public class PhoneLimitActivity extends Activity {
         root.setBackgroundColor(Color.rgb(248, 250, 252));
         scrollView.addView(root);
 
-        TextView title = text("手机时长限制", 28, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.phone_limit_title), 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView subtitle = text("统计非白名单前台 App 的使用时间。填 0 表示关闭对应限制。", 15, Color.rgb(71, 85, 105), false);
+        TextView subtitle = text(getString(R.string.phone_limit_subtitle), 15, Color.rgb(71, 85, 105), false);
         subtitle.setPadding(0, dp(8), 0, dp(16));
         root.addView(subtitle, matchWrap());
 
@@ -52,24 +52,24 @@ public class PhoneLimitActivity extends Activity {
         root.addView(usageView, matchWrap());
 
         dailyLimitInput = numberInput(RuleStore.getPhoneDailyLimitMinutes(this));
-        root.addView(field("每日总时长（分钟）", "今天累计使用非白名单 App 的总额度。", dailyLimitInput), matchWrap());
+        root.addView(field(getString(R.string.field_phone_daily_limit), getString(R.string.hint_phone_daily_limit), dailyLimitInput), matchWrap());
 
         sessionLimitInput = numberInput(RuleStore.getPhoneSessionLimitMinutes(this));
-        root.addView(field("单次打开手机时长（分钟）", "每次解锁后，连续使用非白名单 App 的最多时长。锁屏后重新计算。", sessionLimitInput), matchWrap());
+        root.addView(field(getString(R.string.field_phone_session_limit), getString(R.string.hint_phone_session_limit), sessionLimitInput), matchWrap());
 
         Button whitelistButton = new Button(this);
-        whitelistButton.setText("选择白名单应用");
+        whitelistButton.setText(R.string.action_choose_whitelist);
         whitelistButton.setAllCaps(false);
         whitelistButton.setOnClickListener(v -> startActivity(new Intent(this, PhoneWhitelistActivity.class)));
         root.addView(whitelistButton, matchWrap());
 
         Button saveButton = new Button(this);
-        saveButton.setText("保存手机时长限制");
+        saveButton.setText(R.string.action_save_phone_limit);
         saveButton.setAllCaps(false);
         saveButton.setOnClickListener(v -> saveLimits());
         root.addView(saveButton, matchWrap());
 
-        TextView hint = text("超过额度后，再打开非白名单 App 会被拦截。电话、系统界面和本应用不会计入。", 13, Color.rgb(100, 116, 139), false);
+        TextView hint = text(getString(R.string.phone_limit_hint), 13, Color.rgb(100, 116, 139), false);
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, dp(18), 0, 0);
         root.addView(hint, matchWrap());
@@ -109,7 +109,7 @@ public class PhoneLimitActivity extends Activity {
         RuleStore.savePhoneLimits(this, dailyLimit, sessionLimit);
         V2RuleBridge.savePhoneLimits(this, dailyLimit, sessionLimit);
         updateUsage();
-        Toast.makeText(this, "手机时长限制已保存", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.toast_phone_limit_saved, Toast.LENGTH_SHORT).show();
     }
 
     private void updateUsage() {
@@ -119,9 +119,13 @@ public class PhoneLimitActivity extends Activity {
         long usedMinutes = V2RuleBridge.getPhoneDailyUsedMinutes(this);
         int dailyLimit = RuleStore.getPhoneDailyLimitMinutes(this);
         int sessionLimit = RuleStore.getPhoneSessionLimitMinutes(this);
-        String dailyText = dailyLimit <= 0 ? "每日总时长：未开启" : "每日总时长：" + dailyLimit + " 分钟";
-        String sessionText = sessionLimit <= 0 ? "单次打开手机：未开启" : "单次打开手机：" + sessionLimit + " 分钟";
-        usageView.setText("今日已统计：" + usedMinutes + " 分钟\n" + dailyText + "\n" + sessionText);
+        String dailyText = dailyLimit <= 0
+                ? getString(R.string.phone_daily_limit_disabled)
+                : getString(R.string.phone_daily_limit_enabled, dailyLimit);
+        String sessionText = sessionLimit <= 0
+                ? getString(R.string.phone_session_limit_disabled)
+                : getString(R.string.phone_session_limit_enabled, sessionLimit);
+        usageView.setText(getString(R.string.phone_usage_status_format, usedMinutes, dailyText, sessionText));
     }
 
     private int intValue(EditText input, int fallback) {

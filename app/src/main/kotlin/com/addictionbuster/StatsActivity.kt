@@ -33,7 +33,7 @@ class StatsActivity : Activity() {
         ).dailySnapshot()
 
         val root = UiKit.screen(this).apply {
-            addView(UiKit.title(this@StatsActivity, "今日报告"), UiKit.matchWrap())
+            addView(UiKit.title(this@StatsActivity, getString(R.string.stats_title)), UiKit.matchWrap())
             addView(UiKit.subtitle(this@StatsActivity, snapshot.dateKey), UiKit.matchWrap())
 
             addView(summaryCard(snapshot), UiKit.matchWrap())
@@ -45,29 +45,29 @@ class StatsActivity : Activity() {
 
     private fun summaryCard(snapshot: DailyStatsSnapshot): LinearLayout =
         UiKit.card(this).apply {
-            addView(UiKit.sectionTitle(this@StatsActivity, "总览"), UiKit.matchWrap())
-            UiKit.addInfoRow(this, "手机使用", formatDuration(snapshot.phoneUsage.dailyUsedMillis))
-            UiKit.addInfoRow(this, "本次解锁", formatDuration(snapshot.phoneUsage.sessionUsedMillis))
-            UiKit.addInfoRow(this, "拦截事件", "${snapshot.eventStats.blockEvents} 次")
-            UiKit.addInfoRow(this, "离线待确认", formatDuration(snapshot.phoneUsage.pendingOfflineGapMillis))
+            addView(UiKit.sectionTitle(this@StatsActivity, getString(R.string.section_summary)), UiKit.matchWrap())
+            UiKit.addInfoRow(this, getString(R.string.label_phone_usage), formatDuration(snapshot.phoneUsage.dailyUsedMillis))
+            UiKit.addInfoRow(this, getString(R.string.label_current_unlock), formatDuration(snapshot.phoneUsage.sessionUsedMillis))
+            UiKit.addInfoRow(this, getString(R.string.label_interceptions), getString(R.string.count_events_format, snapshot.eventStats.blockEvents))
+            UiKit.addInfoRow(this, getString(R.string.label_pending_offline), formatDuration(snapshot.phoneUsage.pendingOfflineGapMillis))
         }
 
     private fun eventCard(snapshot: DailyStatsSnapshot): LinearLayout =
         UiKit.card(this).apply {
-            addView(UiKit.sectionTitle(this@StatsActivity, "事件明细"), UiKit.matchWrap())
-            UiKit.addInfoRow(this, "总事件", "${snapshot.eventStats.totalEvents} 次")
-            UiKit.addInfoRow(this, "双开相关", "${snapshot.eventStats.cloneEvents} 次")
-            UiKit.addInfoRow(this, "权限异常", "${snapshot.eventStats.permissionAbnormalEvents} 次")
+            addView(UiKit.sectionTitle(this@StatsActivity, getString(R.string.section_event_details)), UiKit.matchWrap())
+            UiKit.addInfoRow(this, getString(R.string.label_total_events), getString(R.string.count_events_format, snapshot.eventStats.totalEvents))
+            UiKit.addInfoRow(this, getString(R.string.label_clone_events), getString(R.string.count_events_format, snapshot.eventStats.cloneEvents))
+            UiKit.addInfoRow(this, getString(R.string.label_permission_events), getString(R.string.count_events_format, snapshot.eventStats.permissionAbnormalEvents))
             UiKit.addInfoRow(
                 this,
-                "离线间隙",
-                "${snapshot.eventStats.offlineGapEvents} 次 / ${formatDuration(snapshot.eventStats.offlineGapMillis)}"
+                getString(R.string.label_offline_gap),
+                getString(R.string.stats_offline_gap_format, snapshot.eventStats.offlineGapEvents, formatDuration(snapshot.eventStats.offlineGapMillis))
             )
         }
 
     private fun appUsageCard(snapshot: DailyStatsSnapshot): LinearLayout =
         UiKit.card(this).apply {
-            addView(UiKit.sectionTitle(this@StatsActivity, "App 用量"), UiKit.matchWrap())
+            addView(UiKit.sectionTitle(this@StatsActivity, getString(R.string.section_app_usage)), UiKit.matchWrap())
             addAppUsageList(snapshot)
         }
 
@@ -76,7 +76,7 @@ class StatsActivity : Activity() {
             addView(
                 MascotUi.emptyState(
                     this@StatsActivity,
-                    "今天还没有统计记录。打开受控应用或设置手机时长后，这里会显示今日报告。"
+                    getString(R.string.stats_empty)
                 ),
                 UiKit.matchWrap()
             )
@@ -100,17 +100,17 @@ class StatsActivity : Activity() {
                 },
                 UiKit.matchWrap()
             )
-            addView(summaryLine("今日使用", formatDuration(usage.usedMillis)), UiKit.matchWrap())
-            addView(summaryLine("本次使用", formatDuration(usage.sessionUsedMillis)), UiKit.matchWrap())
-            addView(summaryLine("连续使用", formatDuration(usage.continuousUsedMillis)), UiKit.matchWrap())
-            addView(summaryLine("打开次数", "${usage.openCount} 次"), UiKit.matchWrap())
+            addView(summaryLine(getString(R.string.label_daily_usage), formatDuration(usage.usedMillis)), UiKit.matchWrap())
+            addView(summaryLine(getString(R.string.label_session_usage), formatDuration(usage.sessionUsedMillis)), UiKit.matchWrap())
+            addView(summaryLine(getString(R.string.label_continuous_usage), formatDuration(usage.continuousUsedMillis)), UiKit.matchWrap())
+            addView(summaryLine(getString(R.string.label_open_count), getString(R.string.count_events_format, usage.openCount)), UiKit.matchWrap())
             if (usage.pendingOfflineGapMillis > 0L) {
-                addView(summaryLine("离线待确认", formatDuration(usage.pendingOfflineGapMillis)), UiKit.matchWrap())
+                addView(summaryLine(getString(R.string.label_pending_offline), formatDuration(usage.pendingOfflineGapMillis)), UiKit.matchWrap())
             }
         }
 
     private fun summaryLine(label: String, value: String): TextView =
-        UiKit.body(this, "$label：$value").apply {
+        UiKit.body(this, getString(R.string.summary_line_format, label, value)).apply {
             setPadding(0, UiKit.dp(this@StatsActivity, 3), 0, UiKit.dp(this@StatsActivity, 3))
         }
 
@@ -123,9 +123,9 @@ class StatsActivity : Activity() {
         val minutes = (totalSeconds % 3600L) / 60L
         val seconds = totalSeconds % 60L
         return when {
-            hours > 0L -> "${hours}小时${minutes}分钟"
-            minutes > 0L -> "${minutes}分钟${seconds}秒"
-            else -> "${seconds}秒"
+            hours > 0L -> getString(R.string.duration_hours_minutes_format, hours, minutes)
+            minutes > 0L -> getString(R.string.duration_minutes_seconds_format, minutes, seconds)
+            else -> getString(R.string.duration_seconds_format, seconds)
         }
     }
 

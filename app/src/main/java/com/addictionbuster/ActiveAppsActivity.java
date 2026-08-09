@@ -30,10 +30,10 @@ public class ActiveAppsActivity extends Activity {
         root.setPadding(dp(22), dp(26), dp(22), dp(18));
         root.setBackgroundColor(Color.rgb(248, 250, 252));
 
-        TextView title = text("生效应用", 28, Color.rgb(15, 23, 42), true);
+        TextView title = text(getString(R.string.active_apps_title), 28, Color.rgb(15, 23, 42), true);
         root.addView(title, matchWrap());
 
-        TextView subtitle = text("这里显示已经启用拦截的所有应用。点进去可以查看和修改规则。", 15, Color.rgb(71, 85, 105), false);
+        TextView subtitle = text(getString(R.string.active_apps_subtitle), 15, Color.rgb(71, 85, 105), false);
         subtitle.setPadding(0, dp(8), 0, dp(14));
         root.addView(subtitle, matchWrap());
 
@@ -55,7 +55,7 @@ public class ActiveAppsActivity extends Activity {
     private void populateList(LinearLayout list) {
         Set<String> blockedPackages = RuleStore.getBlockedPackages(this);
         if (blockedPackages.isEmpty()) {
-            TextView empty = text("还没有生效应用。\n去“增加应用”里选择一个要拦截的 App。", 16, Color.rgb(100, 116, 139), false);
+            TextView empty = text(getString(R.string.active_apps_empty), 16, Color.rgb(100, 116, 139), false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(44), 0, 0);
             list.addView(empty, matchWrap());
@@ -73,7 +73,7 @@ public class ActiveAppsActivity extends Activity {
     }
 
     private void addAddAppLink(LinearLayout list) {
-        TextView addLink = text("增加应用", 20, Color.rgb(37, 99, 235), true);
+        TextView addLink = text(getString(R.string.add_app_title), 20, Color.rgb(37, 99, 235), true);
         addLink.setPadding(0, dp(16), 0, dp(8));
         addLink.setOnClickListener(v -> startActivity(new Intent(this, AddAppActivity.class)));
         list.addView(addLink, matchWrap());

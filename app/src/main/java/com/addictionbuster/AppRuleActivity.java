@@ -64,14 +64,14 @@ public class AppRuleActivity extends Activity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView eyebrow = UiKit.title(this, "拦截规则");
+        TextView eyebrow = UiKit.title(this, getString(R.string.app_rule_title));
         header.addView(eyebrow, new LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
         ));
 
-        TextView saveLink = UiKit.text(this, "保存", 18, UiKit.COLOR_PRIMARY, true);
+        TextView saveLink = UiKit.text(this, getString(R.string.action_save), 18, UiKit.COLOR_PRIMARY, true);
         saveLink.setGravity(Gravity.CENTER);
         saveLink.setPadding(UiKit.dp(this, 12), UiKit.dp(this, 6), 0, UiKit.dp(this, 6));
         saveLink.setOnClickListener(v -> saveRule());
@@ -104,39 +104,39 @@ public class AppRuleActivity extends Activity {
         confirmTextInput = textInput(rule.confirmText);
 
         LinearLayout quotaCard = UiKit.card(this);
-        quotaCard.addView(UiKit.sectionTitle(this, "使用额度"), UiKit.matchWrap());
-        quotaCard.addView(field("每日额度（分钟）", "一天内最多允许使用多久，0 表示暂不限制。", dailyQuotaInput), UiKit.matchWrap());
-        quotaCard.addView(field("本次使用上限（分钟）", "挑战完成后单次最多放行多久。", sessionLimitInput), UiKit.matchWrap());
+        quotaCard.addView(UiKit.sectionTitle(this, getString(R.string.section_usage_quota)), UiKit.matchWrap());
+        quotaCard.addView(field(getString(R.string.field_daily_quota), getString(R.string.hint_daily_quota), dailyQuotaInput), UiKit.matchWrap());
+        quotaCard.addView(field(getString(R.string.field_session_limit), getString(R.string.hint_session_limit), sessionLimitInput), UiKit.matchWrap());
         root.addView(quotaCard, UiKit.matchWrap());
 
         LinearLayout challengeCard = UiKit.card(this);
-        challengeCard.addView(UiKit.sectionTitle(this, "挑战设置"), UiKit.matchWrap());
-        challengeCard.addView(field("等待倒计时（秒）", "打开被拦截应用前先等多久。", waitSecondsInput), UiKit.matchWrap());
-        challengeCard.addView(field("互动点击次数", "倒计时后还需要追着按钮点几次，0 表示不启用。", requiredTapsInput), UiKit.matchWrap());
-        challengeCard.addView(field("按钮隐藏次数", "互动过程中按钮随机隐藏几次，0 表示不隐藏。", hiddenCountInput), UiKit.matchWrap());
-        challengeCard.addView(field("每次隐藏时长（秒）", "按钮隐藏后多久再出现。", hiddenSecondsInput), UiKit.matchWrap());
+        challengeCard.addView(UiKit.sectionTitle(this, getString(R.string.section_challenge_settings)), UiKit.matchWrap());
+        challengeCard.addView(field(getString(R.string.field_wait_countdown), getString(R.string.hint_wait_countdown), waitSecondsInput), UiKit.matchWrap());
+        challengeCard.addView(field(getString(R.string.field_required_taps), getString(R.string.hint_required_taps), requiredTapsInput), UiKit.matchWrap());
+        challengeCard.addView(field(getString(R.string.field_hidden_count), getString(R.string.hint_hidden_count), hiddenCountInput), UiKit.matchWrap());
+        challengeCard.addView(field(getString(R.string.field_hidden_seconds), getString(R.string.hint_hidden_seconds), hiddenSecondsInput), UiKit.matchWrap());
         root.addView(challengeCard, UiKit.spaced(this, 12));
 
         LinearLayout confirmCard = UiKit.card(this);
-        confirmCard.addView(UiKit.sectionTitle(this, "文字确认"), UiKit.matchWrap());
-        confirmCard.addView(field("确认文字", "例如输入“我选择继续”。留空表示不需要文字确认。", confirmTextInput), UiKit.matchWrap());
+        confirmCard.addView(UiKit.sectionTitle(this, getString(R.string.section_text_confirmation)), UiKit.matchWrap());
+        confirmCard.addView(field(getString(R.string.field_confirm_text), getString(R.string.hint_confirm_text), confirmTextInput), UiKit.matchWrap());
         root.addView(confirmCard, UiKit.spaced(this, 12));
 
-        Button saveButton = UiKit.primaryButton(this, "保存规则");
+        Button saveButton = UiKit.primaryButton(this, getString(R.string.action_save_rule));
         saveButton.setOnClickListener(v -> saveRule());
         root.addView(saveButton, UiKit.spaced(this, 16));
 
         LinearLayout dangerCard = UiKit.card(this);
-        dangerCard.addView(UiKit.sectionTitle(this, "危险操作"), UiKit.matchWrap());
-        TextView dangerHint = UiKit.hint(this, "停用后，这个应用会从已管控应用中移除。");
+        dangerCard.addView(UiKit.sectionTitle(this, getString(R.string.section_danger_actions)), UiKit.matchWrap());
+        TextView dangerHint = UiKit.hint(this, getString(R.string.hint_disable_app));
         dangerHint.setPadding(0, 0, 0, UiKit.dp(this, 8));
         dangerCard.addView(dangerHint, UiKit.matchWrap());
-        Button disableButton = UiKit.dangerButton(this, "停用这个应用拦截");
+        Button disableButton = UiKit.dangerButton(this, getString(R.string.action_disable_app));
         disableButton.setOnClickListener(v -> disableRule());
         dangerCard.addView(disableButton, UiKit.matchWrap());
         root.addView(dangerCard, UiKit.spaced(this, 16));
 
-        TextView hint = UiKit.hint(this, "保存后，下一次打开它时，新规则会参与拦截。");
+        TextView hint = UiKit.hint(this, getString(R.string.hint_rule_saved));
         hint.setGravity(Gravity.CENTER);
         hint.setPadding(0, UiKit.dp(this, 16), 0, 0);
         root.addView(hint, UiKit.matchWrap());
@@ -153,30 +153,29 @@ public class AppRuleActivity extends Activity {
 
         LinearLayout guide = UiKit.card(this);
 
-        TextView title = UiKit.text(this, "首次使用前先开启权限", 17, UiKit.COLOR_DANGER, true);
+        TextView title = UiKit.text(this, getString(R.string.permission_guide_title), 17, UiKit.COLOR_DANGER, true);
         guide.addView(title, UiKit.matchWrap());
 
         TextView body = UiKit.body(
                 this,
-                "必需：开启无障碍拦截服务，才能识别并拦截前台 App。\n"
-                        + "可选：开启后台媒体阻断，才能尝试暂停后台播放声音。"
+                getString(R.string.permission_guide_body)
         );
         body.setPadding(0, UiKit.dp(this, 6), 0, UiKit.dp(this, 8));
         guide.addView(body, UiKit.matchWrap());
 
         if (!accessibilityEnabled) {
-            Button accessibilityButton = UiKit.entryButton(this, "去开启无障碍拦截服务", "系统设置里打开服务开关");
+            Button accessibilityButton = UiKit.entryButton(this, getString(R.string.action_open_accessibility), getString(R.string.hint_open_accessibility));
             accessibilityButton.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
             guide.addView(accessibilityButton, UiKit.matchWrap());
         }
 
         if (!mediaEnabled) {
-            Button mediaButton = UiKit.entryButton(this, "了解后台媒体阻断权限", "可选，用于暂停后台播放声音");
+            Button mediaButton = UiKit.entryButton(this, getString(R.string.action_open_media_permission), getString(R.string.hint_open_media_permission));
             mediaButton.setOnClickListener(v -> startActivity(new Intent(this, NotificationAccessGuideActivity.class)));
             guide.addView(mediaButton, UiKit.spaced(this, 8));
         }
 
-        TextView hint = UiKit.hint(this, "规则可以先保存；权限开启后，下一次打开这个应用才会真正拦截。");
+        TextView hint = UiKit.hint(this, getString(R.string.permission_guide_hint));
         hint.setPadding(0, UiKit.dp(this, 8), 0, 0);
         guide.addView(hint, UiKit.matchWrap());
         return guide;
@@ -234,12 +233,12 @@ public class AppRuleActivity extends Activity {
             RuleStore.saveBlockedPackages(this, blockedPackages);
             RuleStore.saveAppRule(this, packageName, rule);
             V2RuleBridge.saveAppRule(this, packageName, rule);
-            Toast.makeText(this, "规则已保存", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_rule_saved, Toast.LENGTH_SHORT).show();
             finish();
         } catch (RuntimeException exception) {
             DiagnosticLogger.log(this, "rule", "failed to save rule package=" + packageName
                     + " error=" + exception.getMessage());
-            Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_save_failed, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -249,7 +248,7 @@ public class AppRuleActivity extends Activity {
         RuleStore.saveBlockedPackages(this, blockedPackages);
         RuleStore.clearAppRule(this, packageName);
         V2RuleBridge.clearAppRule(this, packageName);
-        Toast.makeText(this, "已停用拦截", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.toast_interception_disabled, Toast.LENGTH_SHORT).show();
         finish();
     }
 
